@@ -1,0 +1,10 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Resto del CSS */
+body {
+  margin: 0;
+  /* ... */
+}
+/* ... */
