@@ -1,6 +1,6 @@
 import React, { useState, useEffect, createContext, useContext, useCallback } from 'react';
 import { initializeApp } from 'firebase/app';
-import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, signOut } from 'firebase/auth';
+import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from 'firebase/auth'; // Added signInWithEmailAndPassword
 import { getFirestore, collection, doc, getDoc, setDoc, updateDoc, onSnapshot, query, where, addDoc, getDocs, deleteDoc } from 'firebase/firestore';
 // Importa getStorage y ref desde 'firebase/storage' si quieres usar Firebase Storage
 // import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -3943,6 +3943,69 @@ const BasicUserDashboard = () => {
   );
 };
 
+// New LoginForm Component
+const LoginForm = () => {
+  const { auth, addNotification } = useContext(AppContext);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      addNotification('Inicio de sesión exitoso.', 'success');
+    } catch (error) {
+      console.error('Error al iniciar sesión:', error);
+      addNotification(`Error al iniciar sesión: ${error.message}`, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="flex items-center justify-center min-h-screen bg-gray-900">
+      <div className="bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-md border border-gray-700">
+        <h2 className="text-3xl font-bold text-emerald-400 mb-6 text-center">Iniciar Sesión</h2>
+        <form onSubmit={handleLogin}>
+          <div className="mb-4">
+            <label htmlFor="email" className="block text-gray-200 text-sm font-bold mb-2">Correo Electrónico:</label>
+            <input
+              type="email"
+              id="email"
+              className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-gray-700 text-white"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+          </div>
+          <div className="mb-6">
+            <label htmlFor="password" className="block text-gray-200 text-sm font-bold mb-2">Contraseña:</label>
+            <input
+              type="password"
+              id="password"
+              className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-gray-700 text-white"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+          </div>
+          <div className="flex items-center justify-center">
+            <button
+              type="submit"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-6 rounded-full shadow-lg transition duration-300 ease-in-out transform hover:scale-105 disabled:opacity-50"
+              disabled={loading}
+            >
+              {loading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
 
 // Componente principal de la aplicación
 function App() {
@@ -3992,6 +4055,10 @@ function App() {
             const userData = userDoc.data();
             setUserRole(userData.role || 'basic');
           } else {
+            // If user exists in Firebase Auth but not in Firestore 'users' collection
+            // This case might happen if a user signs up via email/password
+            // and their user data is not yet synced to Firestore.
+            // For simplicity, we'll assign a basic role and create the document.
             setUserRole('basic');
             await setDoc(userDocRef, {
               email: user.email || `user_${user.uid.substring(0, 8)}@example.com`,
@@ -3999,7 +4066,7 @@ function App() {
               createdAt: new Date(),
               isActive: true,
               lastLoginAt: new Date(),
-            });
+            }, { merge: true }); // Use merge: true to avoid overwriting if doc is partially there
           }
         } catch (error) {
           console.error("Error al obtener el rol del usuario:", error);
@@ -4013,25 +4080,28 @@ function App() {
       setIsAuthReady(true);
     });
 
-    const handleInitialAuth = async () => {
-      if (firebaseAuth && !firebaseAuth.currentUser) {
-        const initialAuthToken = process.env.REACT_APP_INITIAL_AUTH_TOKEN;
-        try {
-          if (initialAuthToken) {
-            await signInWithCustomToken(firebaseAuth, initialAuthToken);
-            addNotification("Sesión iniciada con token personalizado.", "info");
-          } else {
-            await signInAnonymously(firebaseAuth);
-            addNotification("Sesión iniciada anónimamente.", "info");
-          }
-        } catch (error) {
-          console.error("Error de autenticación inicial:", error);
-          addNotification("Error de autenticación. Inténtalo de nuevo.", "error");
-        }
-      }
-    };
+    // Removed initial anonymous/custom token auth as requested,
+    // to allow only email/password login.
+    // If you need initial auth, you can put it back.
+    // const handleInitialAuth = async () => {
+    //   if (firebaseAuth && !firebaseAuth.currentUser) {
+    //     const initialAuthToken = process.env.REACT_APP_INITIAL_AUTH_TOKEN;
+    //     try {
+    //       if (initialAuthToken) {
+    //         await signInWithCustomToken(firebaseAuth, initialAuthToken);
+    //         addNotification("Sesión iniciada con token personalizado.", "info");
+    //       } else {
+    //         await signInAnonymously(firebaseAuth);
+    //         addNotification("Sesión iniciada anónimamente.", "info");
+    //       }
+    //     } catch (error) {
+    //       console.error("Error de autenticación inicial:", error);
+    //       addNotification("Error de autenticación. Inténtalo de nuevo.", "error");
+    //     }
+    //   }
+    // };
+    // handleInitialAuth();
 
-    handleInitialAuth();
 
     return () => unsubscribe();
   }, [addNotification, dismissNotification]);
@@ -4150,109 +4220,130 @@ function App() {
   );
 
   // This is the function that returns the main content structure
-  const renderContent = () => (
-    <div className="min-h-screen flex flex-col bg-gray-900 font-inter text-gray-100">
-      {/* Header for mobile (hamburger menu) */}
-      <header className="bg-gray-800 shadow-lg p-4 flex justify-between items-center z-20 sticky top-0 md:hidden rounded-b-xl">
-        <h1 className="text-2xl font-bold text-emerald-400">🍓 Frescales</h1>
-        <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="text-gray-300 focus:outline-none">
-          <svg className="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16m-7 6h7"></path>
-          </svg>
-        </button>
-      </header>
-
-      {/* Mobile Menu Overlay */}
-      {isMobileMenuOpen && (
-        <div className="fixed inset-0 bg-gray-900 bg-opacity-95 z-40 flex flex-col p-4 md:hidden animate-fade-in">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-3xl font-bold text-emerald-400">Menú</h2>
-            <button onClick={() => setIsMobileMenuOpen(false)} className="text-gray-300 focus:outline-none">
-              <svg className="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
-              </svg>
-            </button>
-          </div>
-          <nav className="flex flex-col space-y-4 text-lg">
-            {renderNavLinks(true)} {/* Render links for mobile */}
-            <button
-              onClick={handleLogout}
-              className="mt-6 bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-8 rounded-full shadow-lg transition duration-300 ease-in-out transform hover:scale-105 w-full text-left"
-            >
-              Cerrar Sesión
-            </button>
-            <span className="text-sm text-gray-400 mt-4">ID Usuario: <span className="font-mono text-gray-200">{userId}</span></span>
-          </nav>
+  const renderContent = () => {
+    if (!isAuthReady) {
+      return (
+        <div className="flex items-center justify-center min-h-screen bg-gray-900 text-gray-100">
+          <p className="text-xl">Cargando autenticación...</p>
         </div>
-      )}
+      );
+    }
 
-      {/* Desktop Header and Sidebar */}
-      <div className="flex flex-1">
-        <nav className="hidden md:flex flex-col bg-gray-800 shadow-xl p-4 space-y-2 w-64 flex-shrink-0 z-30 rounded-r-xl">
-          <div className="flex items-center mb-6">
-            <h1 className="text-2xl font-bold text-emerald-400">🍓 Frescales</h1>
+    if (!userId) {
+      // User is not authenticated, show login form
+      return (
+        <>
+          <NotificationCenter />
+          <LoginForm />
+        </>
+      );
+    }
+
+    // User is authenticated, show the main application
+    return (
+      <div className="min-h-screen flex flex-col bg-gray-900 font-inter text-gray-100">
+        {/* Header for mobile (hamburger menu) */}
+        <header className="bg-gray-800 shadow-lg p-4 flex justify-between items-center z-20 sticky top-0 md:hidden rounded-b-xl">
+          <h1 className="text-2xl font-bold text-emerald-400">🍓 Frescales</h1>
+          <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="text-gray-300 focus:outline-none">
+            <svg className="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16m-7 6h7"></path>
+            </svg>
+          </button>
+        </header>
+
+        {/* Mobile Menu Overlay */}
+        {isMobileMenuOpen && (
+          <div className="fixed inset-0 bg-gray-900 bg-opacity-95 z-40 flex flex-col p-4 md:hidden animate-fade-in">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-3xl font-bold text-emerald-400">Menú</h2>
+              <button onClick={() => setIsMobileMenuOpen(false)} className="text-gray-300 focus:outline-none">
+                <svg className="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+              </button>
+            </div>
+            <nav className="flex flex-col space-y-4 text-lg">
+              {renderNavLinks(true)} {/* Render links for mobile */}
+              <button
+                onClick={handleLogout}
+                className="mt-6 bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-8 rounded-full shadow-lg transition duration-300 ease-in-out transform hover:scale-105 w-full text-left"
+              >
+                Cerrar Sesión
+              </button>
+              <span className="text-sm text-gray-400 mt-4">ID Usuario: <span className="font-mono text-gray-200">{userId}</span></span>
+            </nav>
           </div>
-          {renderNavLinks()} {/* Render links for desktop */}
-          <div className="mt-auto pt-6"> {/* Push logout to bottom */}
-            <button
-              onClick={handleLogout}
-              className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-full shadow-lg transition duration-300 ease-in-out transform hover:scale-105 w-full text-left"
-            >
-              Cerrar Sesión
-            </button>
-            <span className="block mt-4 text-sm text-gray-400">ID Usuario: <span className="font-mono text-gray-200">{userId}</span></span>
-          </div>
-        </nav>
+        )}
 
-        {/* Main Content Area */}
-        <main className="flex-grow p-4 bg-gray-900 md:ml-0"> {/* Main content bg */}
-          <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8 bg-gray-800 rounded-lg shadow-xl border border-gray-700">
-            <NotificationCenter />
-            {currentPage === 'dashboard' && (
-              <div className="p-6 text-center">
-                <h2 className="text-3xl font-semibold text-emerald-300 mb-4">Dashboard Principal</h2>
-                <p className="text-gray-300">Bienvenido al sistema de gestión de Frescales.</p>
-                {userRole === 'admin' && (
-                  <p className="text-gray-300 font-medium mt-2">Tienes acceso como <span className="text-emerald-400">Administrador</span>.</p>
-                )}
-                {userRole === 'basic' && (
-                  <p className="text-gray-300 font-medium mt-2">Tienes acceso como <span className="text-blue-400">Operario</span>.</p>
-                )}
-                <p className="text-gray-400 text-sm mt-4">
-                  Selecciona una opción del menú de navegación para comenzar.
-                </p>
-              </div>
-            )}
+        {/* Desktop Header and Sidebar */}
+        <div className="flex flex-1">
+          <nav className="hidden md:flex flex-col bg-gray-800 shadow-xl p-4 space-y-2 w-64 flex-shrink-0 z-30 rounded-r-xl">
+            <div className="flex items-center mb-6">
+              <h1 className="text-2xl font-bold text-emerald-400">🍓 Frescales</h1>
+            </div>
+            {renderNavLinks()} {/* Render links for desktop */}
+            <div className="mt-auto pt-6"> {/* Push logout to bottom */}
+              <button
+                onClick={handleLogout}
+                className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-full shadow-lg transition duration-300 ease-in-out transform hover:scale-105 w-full text-left"
+              >
+                Cerrar Sesión
+              </button>
+              <span className="block mt-4 text-sm text-gray-400">ID Usuario: <span className="font-mono text-gray-200">{userId}</span></span>
+            </div>
+          </nav>
 
-            {currentPage === 'admin-inputs' && <InputCatalog />}
-            {currentPage === 'admin-products' && <ProductCatalog />}
-            {currentPage === 'admin-labor-types' && <LaborTypeCatalog />}
-            {currentPage === 'admin-diseases' && <DiseaseCatalog />}
-            {currentPage === 'admin-nutrient-recipes' && <NutrientRecipeCatalog />}
-            {currentPage === 'reports-dashboard' && <ReportsDashboard />}
-            {currentPage === 'admin-users' && <UserManagement />}
-            {currentPage === 'admin-locations' && <LocationCatalog />}
+          {/* Main Content Area */}
+          <main className="flex-grow p-4 bg-gray-900 md:ml-0"> {/* Main content bg */}
+            <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8 bg-gray-800 rounded-lg shadow-xl border border-gray-700">
+              <NotificationCenter />
+              {currentPage === 'dashboard' && (
+                <div className="p-6 text-center">
+                  <h2 className="text-3xl font-semibold text-emerald-300 mb-4">Dashboard Principal</h2>
+                  <p className="text-gray-300">Bienvenido al sistema de gestión de Frescales.</p>
+                  {userRole === 'admin' && (
+                    <p className="text-gray-300 font-medium mt-2">Tienes acceso como <span className="text-emerald-400">Administrador</span>.</p>
+                  )}
+                  {userRole === 'basic' && (
+                    <p className="text-gray-300 font-medium mt-2">Tienes acceso como <span className="text-blue-400">Operario</span>.</p>
+                  )}
+                  <p className="text-gray-400 text-sm mt-4">
+                    Selecciona una opción del menú de navegación para comenzar.
+                  </p>
+                </div>
+              )}
 
-            {currentPage === 'production-form' && <ProductionForm />}
-            {currentPage === 'input-application-form' && <InputApplicationForm />}
-            {currentPage === 'labor-form' && <LaborForm />}
-            {currentPage === 'report-disease-form' && <ReportDiseaseForm />}
+              {currentPage === 'admin-inputs' && <InputCatalog />}
+              {currentPage === 'admin-products' && <ProductCatalog />}
+              {currentPage === 'admin-labor-types' && <LaborTypeCatalog />}
+              {currentPage === 'admin-diseases' && <DiseaseCatalog />}
+              {currentPage === 'admin-nutrient-recipes' && <NutrientRecipeCatalog />}
+              {currentPage === 'reports-dashboard' && <ReportsDashboard />}
+              {currentPage === 'admin-users' && <UserManagement />}
+              {currentPage === 'admin-locations' && <LocationCatalog />}
 
-            {currentPage === 'task-assignment-form' && <TaskAssignmentForm />}
+              {currentPage === 'production-form' && <ProductionForm />}
+              {currentPage === 'input-application-form' && <InputApplicationForm />}
+              {currentPage === 'labor-form' && <LaborForm />}
+              {currentPage === 'report-disease-form' && <ReportDiseaseForm />}
 
-            {currentPage === 'nutrient-calculator' && <NutrientMixCalculatorForm />}
+              {currentPage === 'task-assignment-form' && <TaskAssignmentForm />}
 
-            {currentPage === 'my-activities' && <MyActivities />}
+              {currentPage === 'nutrient-calculator' && <NutrientMixCalculatorForm />}
 
-          </div>
-        </main>
+              {currentPage === 'my-activities' && <MyActivities />}
+
+            </div>
+          </main>
+        </div>
+
+        <footer className="bg-gray-900 text-gray-400 text-center p-4 border-t border-gray-700">
+          <p>&copy; {new Date().getFullYear()} Frescales. Todos los derechos reservados.</p>
+        </footer>
       </div>
-
-      <footer className="bg-gray-900 text-gray-400 text-center p-4 border-t border-gray-700">
-        <p>&copy; {new Date().getFullYear()} Frescales. Todos los derechos reservados.</p>
-      </footer>
-    </div>
-  );
+    );
+  };
   // The App component itself needs to return something.
   // This is where the AppContext.Provider should be.
   return (
