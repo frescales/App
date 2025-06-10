@@ -2131,165 +2131,161 @@ const DiseaseCatalog = () => {
   );
 };
 
-// Componente para el registro de Labores
-const LaborForm = () => {
-  const { db, userId, isAuthReady, addNotification } = useContext(AppContext);
-  const locations = useLocations();
-  const [laborTypes, setLaborTypes] = useState([]);
-  const [formData, setFormData] = useState({
-    date: new Date().toISOString().split('T')[0],
-    locationId: '',
-    laborTypeId: '',
-    observations: ''
-  });
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
+// Componente Modal para seleccionar una enfermedad del catálogo
+// Debe ir antes de ReportDiseaseForm porque ReportDiseaseForm lo utiliza.
+const DiseaseSelectionModal = ({ diseases, onSelect, onClose }) => {
+  const { addNotification } = useContext(AppContext);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filteredDiseases, setFilteredDiseases] = useState(diseases);
+  const [selectedDiseaseInModal, setSelectedDiseaseInModal] = useState(null); // Para mostrar detalles en el modal
 
   useEffect(() => {
-    if (db && isAuthReady) {
-      const appId = process.env.REACT_APP_APP_ID || 'default-app-id';
-      const laborTypesColRef = collection(db, `artifacts/${appId}/public/data/labor_type_catalog`);
-      const q = query(laborTypesColRef, where('isActive', '==', true));
+    setFilteredDiseases(
+      diseases.filter(disease =>
+        disease.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (disease.symptoms && disease.symptoms.toLowerCase().includes(searchTerm.toLowerCase()))
+      )
+    );
+  }, [searchTerm, diseases]);
 
-      const unsubscribe = onSnapshot(q, (snapshot) => {
-        const typesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        setLaborTypes(typesData);
-      }, (error) => {
-        console.error("Error al obtener el catálogo de tipos de labor:", error);
-        addNotification("Error al cargar tipos de labor.", "error");
-      });
-      return () => unsubscribe();
-    }
-  }, [db, isAuthReady, addNotification]);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!formData.date || !formData.locationId || !formData.laborTypeId || !formData.observations) {
-      addNotification("Por favor, rellena todos los campos.", "warning");
-      return;
-    }
-
-    try {
-      const selectedLaborType = laborTypes.find(type => type.id === formData.laborTypeId);
-      const selectedLocation = locations.find(loc => loc.id === formData.locationId);
-      if (!selectedLaborType || !selectedLocation) {
-        addNotification("Tipo de labor o ubicación seleccionados no válidos.", "error");
-        return;
-      }
-
-      const appId = process.env.REACT_APP_APP_ID || 'default-app-id';
-      await addDoc(collection(db, `artifacts/${appId}/public/data/labor_records`), {
-        date: new Date(formData.date),
-        locationId: formData.locationId,
-        locationName: selectedLocation.name,
-        laborTypeId: formData.laborTypeId,
-        laborTypeName: selectedLaborType.name,
-        observations: formData.observations,
-        createdAt: new Date(),
-        createdBy: userId
-      });
-      addNotification("Labor registrada exitosamente.", "success");
-      setFormData({
-        date: new Date().toISOString().split('T')[0],
-        locationId: '',
-        laborTypeId: '',
-        observations: ''
-      });
-    } catch (error) {
-      console.error("Error al registrar labor:", error);
-      addNotification("Error al registrar labor.", "error");
-    }
+  const handleSelectClick = (disease) => {
+    onSelect(disease);
+    addNotification(`Enfermedad "${disease.name}" seleccionada.`, "info");
   };
 
   return (
-    <div className="container mx-auto p-4 max-w-2xl bg-gray-800 text-gray-100 rounded-lg shadow-xl my-8 border border-gray-700">
-      <h2 className="text-3xl font-bold text-emerald-400 mb-6 border-b-2 border-gray-700 pb-2">Registrar Labor</h2>
-      <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-6 md:grid-cols-2">
-        <div>
-          <label htmlFor="laborDate" className="block text-gray-200 text-sm font-bold mb-2">Fecha:</label>
+    <div className="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 animate-fade-in">
+      <div className="bg-gray-800 rounded-lg shadow-2xl p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto relative border border-gray-700">
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 text-gray-400 hover:text-gray-100 transition-colors"
+        >
+          <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+
+        <h3 className="text-3xl font-bold text-emerald-400 mb-6 border-b-2 border-gray-700 pb-2">Catálogo de Enfermedades</h3>
+
+        <div className="mb-4">
           <input
-            type="date"
-            id="laborDate"
-            name="date"
-            value={formData.date}
-            onChange={handleChange}
+            type="text"
+            placeholder="Buscar por nombre o síntomas..."
             className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-gray-700 text-white"
-            required
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <div>
-          <label htmlFor="locationId" className="block text-gray-200 text-sm font-bold mb-2">Ubicación:</label>
-          <select
-            id="locationId"
-            name="locationId"
-            value={formData.locationId}
-            onChange={handleChange}
-            className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent bg-gray-700 text-white"
-            required
-          >
-            <option value="">Selecciona una ubicación</option>
-            {locations.map(loc => (
-              <option key={loc.id} value={loc.id}>{loc.name}</option>
+
+        {filteredDiseases.length === 0 ? (
+          <p className="text-gray-300 text-center py-8">No se encontraron enfermedades que coincidan con la búsqueda.</p>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+            {filteredDiseases.map(disease => (
+              <div
+                key={disease.id}
+                className="p-4 rounded-lg shadow-md bg-gray-700 border border-gray-600 hover:shadow-lg transition-shadow duration-200 cursor-pointer"
+                onClick={() => setSelectedDiseaseInModal(disease)} // Muestra detalles al hacer clic
+              >
+                <h4 className="text-xl font-semibold text-emerald-300 mb-2">{disease.name}</h4>
+                {disease.photoUrls && disease.photoUrls.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {disease.photoUrls.slice(0, 2).map((url, index) => ( // Muestra un par de fotos en la tarjeta
+                      <img key={index} src={url} alt={disease.name} className="w-20 h-20 object-cover rounded-md" />
+                    ))}
+                    {disease.photoUrls.length > 2 && <span className="text-gray-400 self-end ml-1">+{disease.photoUrls.length - 2}</span>}
+                  </div>
+                )}
+                <p className="text-sm text-gray-300 line-clamp-3">
+                  <span className="font-medium text-gray-100">Síntomas:</span> {disease.symptoms || 'N/A'}
+                </p>
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleSelectClick(disease); }} // Detener propagación
+                  className="mt-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-1 px-3 rounded-full text-sm transition duration-300 w-full"
+                >
+                  Seleccionar
+                </button>
+              </div>
             ))}
-          </select>
-        </div>
-        <div className="md:col-span-2">
-          <label htmlFor="laborTypeId" className="block text-gray-200 text-sm font-bold mb-2">Tipo de Labor:</label>
-          <select
-            id="laborTypeId"
-            name="laborTypeId"
-            value={formData.laborTypeId}
-            onChange={handleChange}
-            className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent bg-gray-700 text-white"
-            required
-          >
-            <option value="">Selecciona un tipo de labor</option>
-            {laborTypes.map(type => (
-              <option key={type.id} value={type.id}>{type.name}</option>
-            ))}
-          </select>
-        </div>
-        <div className="md:col-span-2">
-          <label htmlFor="observations" className="block text-gray-200 text-sm font-bold mb-2">Observaciones:</label>
-          <textarea
-            id="observations"
-            name="observations"
-            value={formData.observations}
-            onChange={handleChange}
-            rows="4"
-            placeholder="Detalles sobre la labor realizada..."
-            className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-gray-700 text-white"
-            required
-          ></textarea>
-        </div>
-        <div className="md:col-span-2 flex justify-end">
+          </div>
+        )}
+
+        <div className="flex justify-center mt-6">
           <button
-            type="submit"
-            className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-6 rounded-full shadow-lg transition duration-300 ease-in-out transform hover:scale-105"
+            onClick={onClose}
+            className="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-6 rounded-full shadow-lg transition duration-300 ease-in-out transform hover:scale-105"
           >
-            Registrar Labor
+            Cerrar Catálogo
           </button>
         </div>
-      </form>
+
+        {/* Modal de detalles de una enfermedad dentro del catálogo */}
+        {selectedDiseaseInModal && (
+          <div className="fixed inset-0 bg-gray-900 bg-opacity-85 flex items-center justify-center z-50 p-4 animate-fade-in">
+            <div className="bg-gray-700 rounded-lg shadow-2xl p-6 max-w-xl w-full max-h-[85vh] overflow-y-auto relative border border-gray-600">
+              <button
+                onClick={() => setSelectedDiseaseInModal(null)}
+                className="absolute top-3 right-3 text-gray-400 hover:text-gray-100 transition-colors"
+              >
+                <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+              </button>
+              <h4 className="text-2xl font-bold text-emerald-300 mb-4 border-b border-gray-600 pb-2">{selectedDiseaseInModal.name}</h4>
+              
+              {selectedDiseaseInModal.photoUrls && selectedDiseaseInModal.photoUrls.length > 0 && (
+                <div className="flex flex-wrap gap-3 mb-4 justify-center">
+                  {selectedDiseaseInModal.photoUrls.map((url, index) => (
+                    <img key={index} src={url} alt={selectedDiseaseInModal.name} className="w-32 h-32 object-cover rounded-md shadow-md border border-gray-500" />
+                  ))}
+                </div>
+              )}
+
+              <p className="text-gray-200 mb-3">
+                <span className="font-semibold text-gray-100">Síntomas:</span> {selectedDiseaseInModal.symptoms || 'N/A'}
+              </p>
+              <p className="text-gray-200 mb-4">
+                <span className="font-semibold text-gray-100">Indicaciones:</span> {selectedDiseaseInModal.indications || 'N/A'}
+              </p>
+              <div className="flex justify-center gap-4 mt-6">
+                <button
+                  onClick={() => handleSelectClick(selectedDiseaseInModal)}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-5 rounded-full shadow-lg transition duration-300 ease-in-out transform hover:scale-105"
+                >
+                  Seleccionar esta
+                </button>
+                <button
+                  onClick={() => setSelectedDiseaseInModal(null)}
+                  className="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-5 rounded-full shadow-lg transition duration-300 ease-in-out transform hover:scale-105"
+                >
+                  Volver al Catálogo
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
+
+
 // Componente para reportar una Enfermedad
 const ReportDiseaseForm = () => {
   const { db, userId, isAuthReady, addNotification } = useContext(AppContext);
-  const locations = useLocations();
-  const [diseases, setDiseases] = useState([]);
+  const locations = useLocations(); // Asumo que useLocations está definido antes o es accesible
+  const [diseases, setDiseases] = useState([]); // Catálogo completo de enfermedades
+  const [showDiseaseSelectionModal, setShowDiseaseSelectionModal] = useState(false); // Nuevo: para controlar el modal
+  const [selectedDiseaseDetails, setSelectedDiseaseDetails] = useState(null); // Nuevo: detalles de la enfermedad seleccionada
+
   const [formData, setFormData] = useState({
     date: new Date().toISOString().split('T')[0],
     locationId: '',
-    diseaseId: '',
+    diseaseId: '', // Ahora se actualizará desde selectedDiseaseDetails
     severity: 'Baja',
     comments: '',
-    photoFile: null, // Nuevo: para el objeto File
-    photoPreviewUrl: '' // Nuevo: para la URL de previsualización local
+    photoFile: null,
+    photoPreviewUrl: ''
   });
   const [aiLoading, setAiLoading] = useState(false);
   const [aiDiagnosis, setAiDiagnosis] = useState('');
@@ -2330,10 +2326,21 @@ const ReportDiseaseForm = () => {
     }
   }, [db, isAuthReady, addNotification]);
 
+  // Función para manejar la selección de una enfermedad desde el modal
+  const handleDiseaseSelect = (disease) => {
+    setSelectedDiseaseDetails(disease);
+    setFormData(prev => ({ ...prev, diseaseId: disease.id }));
+    setShowDiseaseSelectionModal(false); // Cerrar el modal
+  };
+
   const handleSuggestDiagnosis = async () => {
     if (!formData.comments.trim()) {
       addNotification("Por favor, introduce comentarios sobre los síntomas para la sugerencia de diagnóstico.", "warning");
       return;
+    }
+    if (!selectedDiseaseDetails) {
+        addNotification("Por favor, selecciona una enfermedad para obtener un diagnóstico más preciso.", "warning");
+        return;
     }
 
     setAiLoading(true);
@@ -2342,9 +2349,10 @@ const ReportDiseaseForm = () => {
 
     try {
       const selectedLocation = locations.find(loc => loc.id === formData.locationId);
-      const selectedDisease = diseases.find(d => d.id === formData.diseaseId);
+      // Usar selectedDiseaseDetails para el nombre de la enfermedad
+      const diseaseNameForPrompt = selectedDiseaseDetails ? selectedDiseaseDetails.name : 'no especificada';
 
-      const prompt = `Soy un agricultor de fresas hidropónicas. Mis plantas en ${selectedLocation ? selectedLocation.name : 'una ubicación no especificada'} están mostrando los siguientes síntomas: "${formData.comments}". La severidad reportada es "${formData.severity}". Si ya he identificado la enfermedad como "${selectedDisease ? selectedDisease.name : 'no especificada'}".
+      const prompt = `Soy un agricultor de fresas hidropónicas. Mis plantas en ${selectedLocation ? selectedLocation.name : 'una ubicación no especificada'} están mostrando los siguientes síntomas: "${formData.comments}". La severidad reportada es "${formData.severity}". Si ya he identificado la enfermedad como "${diseaseNameForPrompt}".
       Basado en estos síntomas, ¿cuál podría ser la enfermedad más probable y qué acciones iniciales debo tomar para diagnosticarla o mitigarla? Por favor, sé conciso y proporciona pasos accionables.`;
 
       const payload = { contents: [{ role: "user", parts: [{ text: prompt }] }] };
@@ -2382,28 +2390,34 @@ const ReportDiseaseForm = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.date || !formData.locationId || !formData.diseaseId || !formData.severity) {
+    // Validar que se haya seleccionado una enfermedad y todos los campos obligatorios
+    if (!formData.date || !formData.locationId || !selectedDiseaseDetails || !formData.severity) {
       addNotification("Por favor, rellena los campos obligatorios: Fecha, Ubicación, Enfermedad y Severidad.", "warning");
       return;
     }
 
     let imageUrl = '';
+    // Lógica REAL para subir a Firebase Storage (necesita getStorage, ref, uploadBytes, getDownloadURL)
+    // Asegúrate de que estas funciones estén disponibles en el scope global de App.js
     if (formData.photoFile) {
-      addNotification("Subiendo imagen... (simulado)", "info", 2000);
-      // Aquí iría la lógica REAL para subir a Firebase Storage
-      // const storage = getStorage(db);
-      // const imageRef = ref(storage, `disease_images/${formData.photoFile.name}_${Date.now()}`);
-      // await uploadBytes(imageRef, formData.photoFile);
-      // imageUrl = await getDownloadURL(imageRef);
-      // addNotification("Imagen subida exitosamente.", "success");
-      imageUrl = formData.photoPreviewUrl;
+      addNotification("Subiendo imagen...", "info", 0);
+      try {
+        const storage = getStorage(db.app); // Asumo que db.app te da la instancia de Firebase App
+        const imageRef = ref(storage, `disease_reports_images/${formData.photoFile.name}_${Date.now()}`);
+        await uploadBytes(imageRef, formData.photoFile);
+        imageUrl = await getDownloadURL(imageRef);
+        addNotification("Imagen de reporte subida exitosamente.", "success");
+      } catch (uploadError) {
+        console.error("Error al subir la imagen del reporte:", uploadError);
+        addNotification("Error al subir la imagen del reporte. Intenta de nuevo.", "error");
+        return; // No continuar si la subida falla
+      }
     }
 
     try {
-      const selectedDisease = diseases.find(disease => disease.id === formData.diseaseId);
       const selectedLocation = locations.find(loc => loc.id === formData.locationId);
-      if (!selectedDisease || !selectedLocation) {
-        addNotification("Enfermedad o ubicación seleccionadas no válidas.", "error");
+      if (!selectedLocation) {
+        addNotification("Ubicación seleccionada no válida.", "error");
         return;
       }
 
@@ -2412,8 +2426,8 @@ const ReportDiseaseForm = () => {
         date: new Date(formData.date),
         locationId: formData.locationId,
         locationName: selectedLocation.name,
-        diseaseId: formData.diseaseId,
-        diseaseName: selectedDisease.name,
+        diseaseId: selectedDiseaseDetails.id, // Usar el ID de la enfermedad seleccionada
+        diseaseName: selectedDiseaseDetails.name, // Usar el nombre de la enfermedad seleccionada
         severity: formData.severity,
         comments: formData.comments,
         photoUrl: imageUrl,
@@ -2431,6 +2445,7 @@ const ReportDiseaseForm = () => {
         photoFile: null,
         photoPreviewUrl: ''
       });
+      setSelectedDiseaseDetails(null); // Limpiar la enfermedad seleccionada
       setAiDiagnosis('');
     } catch (error) {
       console.error("Error al registrar reporte de enfermedad:", error);
@@ -2471,20 +2486,26 @@ const ReportDiseaseForm = () => {
           </select>
         </div>
         <div className="md:col-span-2">
-          <label htmlFor="diseaseId" className="block text-gray-200 text-sm font-bold mb-2">Enfermedad:</label>
-          <select
-            id="diseaseId"
-            name="diseaseId"
-            value={formData.diseaseId}
-            onChange={handleChange}
-            className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent bg-gray-700 text-white"
-            required
-          >
-            <option value="">Selecciona una enfermedad</option>
-            {diseases.map(disease => (
-              <option key={disease.id} value={disease.id}>{disease.name}</option>
-            ))}
-          </select>
+          <label htmlFor="selectedDiseaseName" className="block text-gray-200 text-sm font-bold mb-2">Enfermedad Seleccionada:</label>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              id="selectedDiseaseName"
+              value={selectedDiseaseDetails ? selectedDiseaseDetails.name : ''}
+              readOnly // El usuario no puede escribir directamente aquí
+              placeholder="Haz clic en 'Buscar Enfermedad' para seleccionar"
+              className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-gray-700 text-white cursor-pointer"
+              onClick={() => setShowDiseaseSelectionModal(true)} // Abre el modal al hacer clic en el input
+              required // Ahora es requerido que haya una enfermedad seleccionada
+            />
+            <button
+              type="button"
+              onClick={() => setShowDiseaseSelectionModal(true)}
+              className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-full shadow-lg transition duration-300 ease-in-out transform hover:scale-105"
+            >
+              Buscar Enfermedad
+            </button>
+          </div>
         </div>
         <div>
           <label htmlFor="severity" className="block text-gray-200 text-sm font-bold mb-2">Severidad:</label>
@@ -2554,6 +2575,15 @@ const ReportDiseaseForm = () => {
           </button>
         </div>
       </form>
+
+      {/* Modal para seleccionar enfermedades */}
+      {showDiseaseSelectionModal && (
+        <DiseaseSelectionModal
+          diseases={diseases}
+          onSelect={handleDiseaseSelect}
+          onClose={() => setShowDiseaseSelectionModal(false)}
+        />
+      )}
     </div>
   );
 };
@@ -4413,6 +4443,152 @@ const ReportsDashboard = () => {
   );
 };
 
+// Componente para el registro de Labores
+const LaborForm = () => {
+  const { db, userId, isAuthReady, addNotification } = useContext(AppContext);
+  const locations = useLocations(); // Asumo que useLocations está definido antes o es accesible
+  const [laborTypes, setLaborTypes] = useState([]);
+  const [formData, setFormData] = useState({
+    date: new Date().toISOString().split('T')[0],
+    locationId: '',
+    laborTypeId: '',
+    observations: ''
+  });
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  useEffect(() => {
+    if (db && isAuthReady) {
+      const appId = process.env.REACT_APP_APP_ID || 'default-app-id';
+      const laborTypesColRef = collection(db, `artifacts/${appId}/public/data/labor_type_catalog`);
+      const q = query(laborTypesColRef, where('isActive', '==', true));
+
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const typesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setLaborTypes(typesData);
+      }, (error) => {
+        console.error("Error al obtener el catálogo de tipos de labor:", error);
+        addNotification("Error al cargar tipos de labor.", "error");
+      });
+      return () => unsubscribe();
+    }
+  }, [db, isAuthReady, addNotification]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!formData.date || !formData.locationId || !formData.laborTypeId || !formData.observations) {
+      addNotification("Por favor, rellena todos los campos.", "warning");
+      return;
+    }
+
+    try {
+      const selectedLaborType = laborTypes.find(type => type.id === formData.laborTypeId);
+      const selectedLocation = locations.find(loc => loc.id === formData.locationId);
+      if (!selectedLaborType || !selectedLocation) {
+        addNotification("Tipo de labor o ubicación seleccionados no válidos.", "error");
+        return;
+      }
+
+      const appId = process.env.REACT_APP_APP_ID || 'default-app-id';
+      await addDoc(collection(db, `artifacts/${appId}/public/data/labor_records`), {
+        date: new Date(formData.date),
+        locationId: formData.locationId,
+        locationName: selectedLocation.name,
+        laborTypeId: formData.laborTypeId,
+        laborTypeName: selectedLaborType.name,
+        observations: formData.observations,
+        createdAt: new Date(),
+        createdBy: userId
+      });
+      addNotification("Labor registrada exitosamente.", "success");
+      setFormData({
+        date: new Date().toISOString().split('T')[0],
+        locationId: '',
+        laborTypeId: '',
+        observations: ''
+      });
+    } catch (error) {
+      console.error("Error al registrar labor:", error);
+      addNotification("Error al registrar labor.", "error");
+    }
+  };
+
+  return (
+    <div className="container mx-auto p-4 max-w-2xl bg-gray-800 text-gray-100 rounded-lg shadow-xl my-8 border border-gray-700">
+      <h2 className="text-3xl font-bold text-emerald-400 mb-6 border-b-2 border-gray-700 pb-2">Registrar Labor</h2>
+      <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-6 md:grid-cols-2">
+        <div>
+          <label htmlFor="laborDate" className="block text-gray-200 text-sm font-bold mb-2">Fecha:</label>
+          <input
+            type="date"
+            id="laborDate"
+            name="date"
+            value={formData.date}
+            onChange={handleChange}
+            className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-gray-700 text-white"
+            required
+          />
+        </div>
+        <div>
+          <label htmlFor="locationId" className="block text-gray-200 text-sm font-bold mb-2">Ubicación:</label>
+          <select
+            id="locationId"
+            name="locationId"
+            value={formData.locationId}
+            onChange={handleChange}
+            className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent bg-gray-700 text-white"
+            required
+          >
+            <option value="">Selecciona una ubicación</option>
+            {locations.map(loc => (
+              <option key={loc.id} value={loc.id}>{loc.name}</option>
+            ))}
+          </select>
+        </div>
+        <div className="md:col-span-2">
+          <label htmlFor="laborTypeId" className="block text-gray-200 text-sm font-bold mb-2">Tipo de Labor:</label>
+          <select
+            id="laborTypeId"
+            name="laborTypeId"
+            value={formData.laborTypeId}
+            onChange={handleChange}
+            className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent bg-gray-700 text-white"
+            required
+          >
+            <option value="">Selecciona un tipo de labor</option>
+            {laborTypes.map(type => (
+              <option key={type.id} value={type.id}>{type.name}</option>
+            ))}
+          </select>
+        </div>
+        <div className="md:col-span-2">
+          <label htmlFor="observations" className="block text-gray-200 text-sm font-bold mb-2">Observaciones:</label>
+          <textarea
+            id="observations"
+            name="observations"
+            value={formData.observations}
+            onChange={handleChange}
+            rows="4"
+            placeholder="Detalles sobre la labor realizada..."
+            className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-gray-700 text-white"
+            required
+          ></textarea>
+        </div>
+        <div className="md:col-span-2 flex justify-end">
+          <button
+            type="submit"
+            className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-6 rounded-full shadow-lg transition duration-300 ease-in-out transform hover:scale-105"
+          >
+            Registrar Labor
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+};
 
 
 // Componente principal de la aplicación
