@@ -2,8 +2,7 @@ import React, { useState, useEffect, createContext, useContext, useCallback } fr
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, createUserWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { getFirestore, collection, doc, getDoc, setDoc, updateDoc, onSnapshot, query, where, addDoc, getDocs, deleteDoc } from 'firebase/firestore';
-// Importa getStorage y ref desde 'firebase/storage' si quieres usar Firebase Storage
-// import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 
 // Contexto para compartir el estado de Firebase, el usuario y las notificaciones
@@ -1654,7 +1653,6 @@ const LaborTypeCatalog = () => {
   );
 };
 
-
 // Componente para la gestión del Catálogo de Enfermedades
 const DiseaseCatalog = () => {
   const { db, userId, isAuthReady, userRole, addNotification } = useContext(AppContext);
@@ -1662,10 +1660,17 @@ const DiseaseCatalog = () => {
   const [newDiseaseName, setNewDiseaseName] = useState('');
   const [newDiseaseSymptoms, setNewDiseaseSymptoms] = useState('');
   const [newDiseaseIndications, setNewDiseaseIndications] = useState('');
+  const [newDiseasePhotoFiles, setNewDiseasePhotoFiles] = useState([]); // Array para múltiples archivos
+  const [newDiseasePhotoPreviewUrls, setNewDiseasePhotoPreviewUrls] = useState([]); // Array para previsualizaciones
+
   const [editingDiseaseId, setEditingDiseaseId] = useState(null);
   const [editingDiseaseName, setEditingDiseaseName] = useState('');
   const [editingDiseaseSymptoms, setEditingDiseaseSymptoms] = useState('');
   const [editingDiseaseIndications, setEditingDiseaseIndications] = useState('');
+  const [editingDiseasePhotoUrls, setEditingDiseasePhotoUrls] = useState([]); // Array para URLs existentes
+  const [editingDiseasePhotoFiles, setEditingDiseasePhotoFiles] = useState([]); // Array para nuevos archivos al editar
+  const [editingDiseasePhotoPreviewUrls, setEditingDiseasePhotoPreviewUrls] = useState([]); // Array para previsualizaciones al editar
+
   const [showAddForm, setShowAddForm] = useState(false);
 
   useEffect(() => {
@@ -1685,38 +1690,113 @@ const DiseaseCatalog = () => {
     }
   }, [db, userId, isAuthReady, userRole, addNotification]);
 
-  const handleAddDisease = async (e) => {
-      e.preventDefault();
-      if (!newDiseaseName.trim()) {
-        addNotification("El nombre de la enfermedad no puede estar vacío.", "warning");
-        return;
-      }
-      try {
-        const appId = process.env.REACT_APP_APP_ID || 'default-app-id';
-        await addDoc(collection(db, `artifacts/${appId}/public/data/disease_catalog`), {
-          name: newDiseaseName.trim(),
-          symptoms: newDiseaseSymptoms.trim(),
-          indications: newDiseaseIndications.trim(),
-          isActive: true,
-          createdAt: new Date(),
-          createdBy: userId
+  // Función auxiliar para generar URLs de previsualización
+  const generatePreviewUrls = (files) => {
+    return Promise.all(
+      Array.from(files).map(file => {
+        return new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result);
+          reader.readAsDataURL(file);
         });
-        addNotification("Enfermedad añadida exitosamente.", "success");
-        setNewDiseaseName('');
-        setNewDiseaseSymptoms('');
-        setNewDiseaseIndications('');
-        setShowAddForm(false);
-      } catch (error) {
-        console.error("Error al añadir enfermedad:", error);
-        addNotification("Error al añadir enfermedad.", "error");
-      }
-    };
+      })
+    );
+  };
 
-  const handleEditDisease = (diseaseId, currentName, currentSymptoms, currentIndications) => {
-    setEditingDiseaseId(diseaseId);
-    setEditingDiseaseName(currentName);
-    setEditingDiseaseSymptoms(currentSymptoms);
-    setEditingDiseaseIndications(currentIndications);
+  // Manejar el cambio de archivo para el nuevo formulario (múltiples archivos)
+  const handleNewPhotoChange = async (e) => {
+    const files = e.target.files;
+    if (files.length > 0) {
+      setNewDiseasePhotoFiles(Array.from(files));
+      const urls = await generatePreviewUrls(files);
+      setNewDiseasePhotoPreviewUrls(urls);
+    } else {
+      setNewDiseasePhotoFiles([]);
+      setNewDiseasePhotoPreviewUrls([]);
+    }
+  };
+
+  // Manejar el cambio de archivo para el formulario de edición (múltiples archivos)
+  const handleEditPhotoChange = async (e) => {
+    const files = e.target.files;
+    if (files.length > 0) {
+      setEditingDiseasePhotoFiles(Array.from(files));
+      const urls = await generatePreviewUrls(files);
+      setEditingDiseasePhotoPreviewUrls(urls);
+    } else {
+      setEditingDiseasePhotoFiles([]);
+      setEditingDiseasePhotoPreviewUrls([]);
+    }
+  };
+
+  // Función para subir un array de archivos a Firebase Storage
+  const uploadFilesToStorage = async (files) => {
+    const uploadedUrls = [];
+    if (!files || files.length === 0) return uploadedUrls;
+
+    const storage = getStorage(db.app); // Asegúrate de que getStorage está disponible
+    
+    for (const file of files) {
+      const imageRef = ref(storage, `disease_images/${file.name}_${Date.now()}`);
+      await uploadBytes(imageRef, file);
+      const url = await getDownloadURL(imageRef);
+      uploadedUrls.push(url);
+    }
+    return uploadedUrls;
+  };
+
+  const handleAddDisease = async (e) => {
+    e.preventDefault();
+    if (!newDiseaseName.trim()) {
+      addNotification("El nombre de la enfermedad no puede estar vacío.", "warning");
+      return;
+    }
+
+    let photoUrls = [];
+    if (newDiseasePhotoFiles.length > 0) {
+      addNotification("Subiendo imágenes...", "info", 0);
+      try {
+        photoUrls = await uploadFilesToStorage(newDiseasePhotoFiles);
+        addNotification("Imágenes subidas exitosamente.", "success");
+      } catch (uploadError) {
+        console.error("Error al subir las imágenes:", uploadError);
+        addNotification("Error al subir las imágenes. Intenta de nuevo.", "error");
+        return; // No continuar si la subida falla
+      }
+    }
+
+    try {
+      const appId = process.env.REACT_APP_APP_ID || 'default-app-id';
+      await addDoc(collection(db, `artifacts/${appId}/public/data/disease_catalog`), {
+        name: newDiseaseName.trim(),
+        symptoms: newDiseaseSymptoms.trim(),
+        indications: newDiseaseIndications.trim(),
+        photoUrls: photoUrls, // Guardar el array de URLs
+        isActive: true,
+        createdAt: new Date(),
+        createdBy: userId
+      });
+      addNotification("Enfermedad añadida exitosamente.", "success");
+      setNewDiseaseName('');
+      setNewDiseaseSymptoms('');
+      setNewDiseaseIndications('');
+      setNewDiseasePhotoFiles([]);
+      setNewDiseasePhotoPreviewUrls([]);
+      setShowAddForm(false);
+    } catch (error) {
+      console.error("Error al añadir enfermedad:", error);
+      addNotification("Error al añadir enfermedad.", "error");
+    }
+  };
+
+  const handleEditDisease = (disease) => {
+    setEditingDiseaseId(disease.id);
+    setEditingDiseaseName(disease.name);
+    setEditingDiseaseSymptoms(disease.symptoms || '');
+    setEditingDiseaseIndications(disease.indications || '');
+    setEditingDiseasePhotoUrls(disease.photoUrls || []); // Carga el array de URLs existente
+    setEditingDiseasePhotoFiles([]); // Resetear nuevos archivos
+    setEditingDiseasePhotoPreviewUrls(disease.photoUrls || []); // Previsualización con las URLs existentes
   };
 
   const handleSaveDisease = async (diseaseId) => {
@@ -1724,6 +1804,22 @@ const DiseaseCatalog = () => {
       addNotification("El nombre de la enfermedad no puede estar vacío.", "warning");
       return;
     }
+
+    let finalPhotoUrls = [...editingDiseasePhotoUrls]; // Empezar con las URLs que ya existen
+
+    if (editingDiseasePhotoFiles.length > 0) {
+      addNotification("Actualizando imágenes...", "info", 0);
+      try {
+        const newUploadedUrls = await uploadFilesToStorage(editingDiseasePhotoFiles);
+        finalPhotoUrls = [...finalPhotoUrls, ...newUploadedUrls]; // Añadir las nuevas URLs a las existentes
+        addNotification("Nuevas imágenes subidas exitosamente.", "success");
+      } catch (uploadError) {
+        console.error("Error al subir las nuevas imágenes:", uploadError);
+        addNotification("Error al subir las nuevas imágenes. Intenta de nuevo.", "error");
+        return;
+      }
+    }
+
     try {
       const appId = process.env.REACT_APP_APP_ID || 'default-app-id';
       const diseaseDocRef = doc(db, `artifacts/${appId}/public/data/disease_catalog`, diseaseId);
@@ -1731,6 +1827,7 @@ const DiseaseCatalog = () => {
         name: editingDiseaseName.trim(),
         symptoms: editingDiseaseSymptoms.trim(),
         indications: editingDiseaseIndications.trim(),
+        photoUrls: finalPhotoUrls, // Actualizar con el array final de URLs
         updatedAt: new Date(),
         updatedBy: userId
       });
@@ -1739,10 +1836,19 @@ const DiseaseCatalog = () => {
       setEditingDiseaseName('');
       setEditingDiseaseSymptoms('');
       setEditingDiseaseIndications('');
+      setEditingDiseasePhotoUrls([]);
+      setEditingDiseasePhotoFiles([]);
+      setEditingDiseasePhotoPreviewUrls([]);
     } catch (error) {
       console.error("Error al actualizar enfermedad:", error);
       addNotification("Error al actualizar enfermedad.", "error");
     }
+  };
+
+  const handleRemoveEditingPhoto = (indexToRemove) => {
+    setEditingDiseasePhotoUrls(prev => prev.filter((_, idx) => idx !== indexToRemove));
+    setEditingDiseasePhotoPreviewUrls(prev => prev.filter((_, idx) => idx !== indexToRemove));
+    addNotification("La foto será eliminada al guardar los cambios.", "info");
   };
 
   const handleCancelEdit = () => {
@@ -1750,6 +1856,9 @@ const DiseaseCatalog = () => {
     setEditingDiseaseName('');
     setEditingDiseaseSymptoms('');
     setEditingDiseaseIndications('');
+    setEditingDiseasePhotoUrls([]);
+    setEditingDiseasePhotoFiles([]);
+    setEditingDiseasePhotoPreviewUrls([]);
   };
 
   const handleArchiveDisease = async (diseaseId) => {
@@ -1807,6 +1916,25 @@ const DiseaseCatalog = () => {
                 required
               />
             </div>
+            {/* Campo para subir múltiples fotos en el formulario de añadir */}
+            <div>
+              <label htmlFor="newDiseasePhoto" className="block text-gray-200 text-sm font-bold mb-2">Fotos (Opcional):</label>
+              <input
+                type="file"
+                id="newDiseasePhoto"
+                accept="image/*"
+                multiple // Permitir seleccionar múltiples archivos
+                onChange={handleNewPhotoChange}
+                className="block w-full text-sm text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-emerald-500 file:text-white hover:file:bg-emerald-600 cursor-pointer"
+              />
+              {newDiseasePhotoPreviewUrls.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {newDiseasePhotoPreviewUrls.map((url, index) => (
+                    <img key={index} src={url} alt={`Previsualización ${index}`} className="w-24 h-24 object-cover rounded-md shadow-md border border-gray-600" />
+                  ))}
+                </div>
+              )}
+            </div>
             <div className="md:col-span-2">
               <label htmlFor="newDiseaseSymptoms" className="block text-gray-200 text-sm font-bold mb-2">Síntomas:</label>
               <textarea
@@ -1839,7 +1967,14 @@ const DiseaseCatalog = () => {
             </button>
             <button
               type="button"
-              onClick={() => setShowAddForm(false)}
+              onClick={() => {
+                setShowAddForm(false);
+                setNewDiseaseName('');
+                setNewDiseaseSymptoms('');
+                setNewDiseaseIndications('');
+                setNewDiseasePhotoFiles([]);
+                setNewDiseasePhotoPreviewUrls([]);
+              }}
               className="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-full shadow transition duration-300 ease-in-out transform hover:scale-105"
             >
               Cancelar
@@ -1856,13 +1991,14 @@ const DiseaseCatalog = () => {
               <th className="px-5 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">Nombre</th>
               <th className="px-5 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">Síntomas</th>
               <th className="px-5 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">Indicaciones</th>
+              <th className="px-5 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">Fotos</th> {/* Columna actualizada */}
               <th className="px-5 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">Acciones</th>
             </tr>
           </thead>
           <tbody>
             {diseases.length === 0 ? (
               <tr>
-                <td colSpan="4" className="px-5 py-5 border-b border-gray-600 bg-gray-800 text-sm text-gray-300 text-center">
+                <td colSpan="5" className="px-5 py-5 border-b border-gray-600 bg-gray-800 text-sm text-gray-300 text-center">
                   No hay enfermedades registradas.
                 </td>
               </tr>
@@ -1905,6 +2041,53 @@ const DiseaseCatalog = () => {
                       <p className="text-gray-100 whitespace-no-wrap text-sm">{disease.indications || 'N/A'}</p>
                     )}
                   </td>
+                  {/* Columna para mostrar y editar fotos */}
+                  <td className="px-5 py-5 border-b border-gray-600 bg-gray-800 text-sm">
+                    {editingDiseaseId === disease.id ? (
+                      <div>
+                        <label htmlFor={`editDiseasePhoto-${disease.id}`} className="block text-gray-200 text-sm font-bold mb-2">Añadir Más Fotos:</label>
+                        <input
+                          type="file"
+                          id={`editDiseasePhoto-${disease.id}`}
+                          accept="image/*"
+                          multiple // Permitir seleccionar múltiples archivos
+                          onChange={handleEditPhotoChange}
+                          className="block w-full text-sm text-gray-300 file:mr-4 file:py-1 file:px-2 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-emerald-500 file:text-white hover:file:bg-emerald-600 cursor-pointer"
+                        />
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {editingDiseasePhotoPreviewUrls.length > 0 ? (
+                            editingDiseasePhotoPreviewUrls.map((url, index) => (
+                              <div key={index} className="relative group">
+                                <img src={url} alt={`Previsualización ${index}`} className="w-24 h-24 object-cover rounded-md shadow-md border border-gray-600" />
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveEditingPhoto(index)}
+                                  className="absolute top-0 right-0 bg-red-600 text-white rounded-full p-1 text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                                  title="Eliminar foto"
+                                >
+                                  X
+                                </button>
+                              </div>
+                            ))
+                          ) : (
+                            <p className="text-gray-400 text-xs">Sin fotos seleccionadas.</p>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      disease.photoUrls && disease.photoUrls.length > 0 ? (
+                        <div className="flex flex-wrap gap-2">
+                          {disease.photoUrls.map((url, index) => (
+                            <a key={index} href={url} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">
+                              <img src={url} alt={`Enfermedad ${index}`} className="w-16 h-16 object-cover rounded-md" />
+                            </a>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-gray-400">N/A</p>
+                      )
+                    )}
+                  </td>
                   <td className="px-5 py-5 border-b border-gray-600 bg-gray-800 text-sm">
                     {editingDiseaseId === disease.id ? (
                       <div className="flex gap-2">
@@ -1924,7 +2107,7 @@ const DiseaseCatalog = () => {
                     ) : (
                       <div className="flex gap-2">
                         <button
-                          onClick={() => handleEditDisease(disease.id, disease.name, disease.symptoms || '', disease.indications || '')}
+                          onClick={() => handleEditDisease(disease)}
                           className="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-1 px-3 rounded-full text-xs transition duration-300"
                         >
                           Editar
@@ -3280,10 +3463,91 @@ const TaskAssignmentForm = () => {
   );
 };
 
+// Nuevo componente Modal para ver los detalles de la tarea
+const TaskDetailModal = ({ task, onClose }) => {
+  if (!task) return null; // No renderizar si no hay tarea
+
+  return (
+    <div className="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 animate-fade-in">
+      <div className="bg-gray-800 rounded-lg shadow-2xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto relative border border-gray-700">
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 text-gray-400 hover:text-gray-100 transition-colors"
+        >
+          <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+
+        <h3 className="text-3xl font-bold text-emerald-400 mb-4 border-b-2 border-gray-700 pb-2">{task.name}</h3>
+
+        <div className="space-y-4 text-gray-200">
+          <p>
+            <span className="font-semibold text-gray-100">Tipo de Labor:</span> {task.laborTypeName}
+          </p>
+          <p>
+            <span className="font-semibold text-gray-100">Ubicación:</span> {task.locationName}
+          </p>
+          <p>
+            <span className="font-semibold text-gray-100">Fecha Límite:</span> {task.date.toDate().toLocaleDateString()}
+          </p>
+          <p>
+            <span className="font-semibold text-gray-100">Estado:</span>{' '}
+            <span className={`font-semibold ${task.status === 'completed' ? 'text-emerald-400' : 'text-yellow-400'}`}>
+              {task.status === 'pending' ? 'Pendiente' : 'Completada'}
+            </span>
+          </p>
+          {task.completedAt && (
+            <p>
+              <span className="font-semibold text-gray-100">Completada el:</span> {task.completedAt.toDate().toLocaleDateString()}
+            </p>
+          )}
+          {task.assignedToUserName && (
+            <p>
+              <span className="font-semibold text-gray-100">Asignada a:</span> {task.assignedToUserName}
+            </p>
+          )}
+
+          {task.description && (
+            <div>
+              <p className="font-semibold text-gray-100">Descripción / Observaciones:</p>
+              <p className="whitespace-pre-wrap leading-relaxed">{task.description}</p> {/* Usa whitespace-pre-wrap para conservar saltos de línea */}
+            </div>
+          )}
+
+          {task.plannedInputs && task.plannedInputs.length > 0 && (
+            <div>
+              <p className="font-semibold text-gray-100">Insumos Planificados:</p>
+              <ul className="list-disc list-inside ml-4 text-sm">
+                {task.plannedInputs.map((input, idx) => (
+                  <li key={idx}>
+                    {input.inputName}: {input.quantity} {input.unit}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+
+        <div className="mt-8 flex justify-center">
+          <button
+            onClick={onClose}
+            className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-6 rounded-full shadow-lg transition duration-300 ease-in-out transform hover:scale-105"
+          >
+            Cerrar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
 // Componente para ver las actividades asignadas a un operario
 const MyActivities = () => {
   const { db, userId, isAuthReady, userRole, addNotification } = useContext(AppContext);
   const [assignedTasks, setAssignedTasks] = useState([]);
+  const [selectedTask, setSelectedTask] = useState(null); // Nuevo estado para la tarea seleccionada del modal
 
   useEffect(() => {
     if (db && isAuthReady && userId) {
@@ -3294,9 +3558,14 @@ const MyActivities = () => {
       const unsubscribe = onSnapshot(q, (snapshot) => {
         const tasksData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         tasksData.sort((a, b) => {
+          // Primero las pendientes, luego por fecha límite
           if (a.status === 'pending' && b.status !== 'pending') return -1;
           if (a.status !== 'pending' && b.status === 'pending') return 1;
-          return a.date.toDate().getTime() - b.date.toDate().getTime();
+          
+          // Asegúrate de que 'date' sea un objeto Date para comparar
+          const dateA = a.date.toDate ? a.date.toDate() : new Date(a.date);
+          const dateB = b.date.toDate ? b.date.toDate() : new Date(b.date);
+          return dateA.getTime() - dateB.getTime();
         });
         setAssignedTasks(tasksData);
       }, (error) => {
@@ -3321,10 +3590,24 @@ const MyActivities = () => {
         completedBy: userId,
       });
       addNotification("Tarea marcada como completada exitosamente.", "success");
+      // Si el modal está abierto, ciérralo al completar la tarea
+      if (selectedTask && selectedTask.id === taskId) {
+        setSelectedTask(null);
+      }
     } catch (error) {
       console.error("Error al marcar tarea como completada:", error);
       addNotification("Error al marcar tarea como completada.", "error");
     }
+  };
+
+  // Función para abrir el modal de detalles
+  const handleViewDetails = (task) => {
+    setSelectedTask(task);
+  };
+
+  // Función para cerrar el modal de detalles
+  const handleCloseModal = () => {
+    setSelectedTask(null);
   };
 
   if (userRole !== 'basic') {
@@ -3343,7 +3626,13 @@ const MyActivities = () => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {assignedTasks.map(task => (
-            <div key={task.id} className={`p-6 rounded-lg shadow-md ${task.status === 'completed' ? 'bg-emerald-900 border-emerald-700' : 'bg-gray-700 border-gray-600'}`}>
+            <div
+              key={task.id}
+              className={`p-6 rounded-lg shadow-md ${task.status === 'completed' ? 'bg-emerald-900 border-emerald-700' : 'bg-gray-700 border-gray-600'}
+                cursor-pointer hover:shadow-xl hover:scale-[1.01] transition-all duration-200 ease-in-out
+              `}
+              onClick={() => handleViewDetails(task)} // Abre el modal al hacer clic en la tarjeta
+            >
               <h3 className="text-xl font-semibold text-emerald-300 mb-2">{task.name}</h3>
               <p className="text-sm text-gray-300 mb-1">
                 <span className="font-medium text-gray-100">Tipo:</span> {task.laborTypeName}
@@ -3361,14 +3650,14 @@ const MyActivities = () => {
                 </span>
               </p>
               {task.description && (
-                <p className="text-sm text-gray-300 mb-3">
+                <p className="text-sm text-gray-300 mb-3 line-clamp-3"> {/* Limita la descripción a 3 líneas */}
                   <span className="font-medium text-gray-100">Observaciones:</span> {task.description}
                 </p>
               )}
               {task.plannedInputs && task.plannedInputs.length > 0 && (
                 <div className="mt-2 text-sm text-gray-300">
                   <p className="font-medium text-gray-100">Insumos Planificados:</p>
-                  <ul className="list-disc list-inside ml-4">
+                  <ul className="list-disc list-inside ml-4 line-clamp-2"> {/* Limita los insumos a 2 líneas */}
                     {task.plannedInputs.map((input, idx) => (
                       <li key={idx}>{input.inputName}: {input.quantity} {input.unit}</li>
                     ))}
@@ -3382,263 +3671,29 @@ const MyActivities = () => {
               )}
               {task.status === 'pending' && (
                 <button
-                  onClick={() => handleMarkAsCompleted(task.id)}
+                  onClick={(e) => { e.stopPropagation(); handleMarkAsCompleted(task.id); }} // Detener la propagación para no abrir el modal
                   className="mt-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded-full shadow transition duration-300 ease-in-out transform hover:scale-105 w-full"
                 >
                   Marcar como Completada
                 </button>
               )}
+              {/* Botón para ver detalles si la tarjeta no es clickeable completamente o como alternativa */}
+              <button
+                onClick={(e) => { e.stopPropagation(); handleViewDetails(task); }}
+                className="mt-2 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-full text-sm transition duration-300 w-full"
+              >
+                Ver Detalles
+              </button>
             </div>
           ))}
         </div>
       )}
+
+      {/* Renderiza el modal si hay una tarea seleccionada */}
+      <TaskDetailModal task={selectedTask} onClose={handleCloseModal} />
     </div>
   );
 };
-
-
-// Componente para el Dashboard de Reportes
-const ReportsDashboard = () => {
-  const { db, isAuthReady, userRole, addNotification } = useContext(AppContext);
-  const locations = useLocations();
-  const [reportType, setReportType] = useState('production_records');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
-  const [locationFilter, setLocationFilter] = useState('');
-  const [reportData, setReportData] = useState([]);
-  const [loading, setLoading] = useState(false);
-
-  const reportCollections = {
-    'production_records': {
-      name: 'Registros de Producción',
-      fields: ['date', 'locationName', 'productName', 'quantityKg', 'quality'],
-      headers: ['Fecha', 'Ubicación', 'Producto', 'Cantidad (Kg)', 'Calidad']
-    },
-    'input_applications': {
-      name: 'Aplicación de Insumos',
-      fields: ['date', 'locationName', 'objective', 'appliedInputs', 'totalCost'],
-      headers: ['Fecha', 'Ubicación', 'Objetivo', 'Insumos', 'Costo Total ($)']
-    },
-    'labor_records': {
-      name: 'Registros de Labores',
-      fields: ['date', 'locationName', 'laborTypeName', 'observations'],
-      headers: ['Fecha', 'Ubicación', 'Tipo de Labor', 'Observaciones']
-    },
-    'disease_reports': {
-      name: 'Reportes de Enfermedades',
-      fields: ['date', 'locationName', 'diseaseName', 'severity', 'comments', 'photoUrl', 'aiDiagnosisSuggestion'],
-      headers: ['Fecha', 'Ubicación', 'Enfermedad', 'Severidad', 'Comentarios', 'Foto', 'Sug. IA']
-    },
-    'tasks': {
-      name: 'Tareas Asignadas',
-      fields: ['date', 'name', 'laborTypeName', 'locationName', 'assignedToUserName', 'status', 'description', 'plannedInputs'],
-      headers: ['Fecha Límite', 'Tarea', 'Tipo Labor', 'Ubicación', 'Asignado A', 'Estado', 'Descripción', 'Insumos Planificados']
-    },
-    'costs': {
-      name: 'Registros de Costos',
-      fields: ['date', 'type', 'description', 'amount'],
-      headers: ['Fecha', 'Tipo', 'Descripción', 'Monto ($)']
-    },
-  };
-
-  const fetchReport = async () => {
-    if (!db || !isAuthReady) {
-      addNotification("La base de datos no está lista.", "error");
-      return;
-    }
-    if (userRole !== 'admin') {
-      addNotification("No tienes permisos para ver reportes.", "error");
-      return;
-    }
-
-    setLoading(true);
-    setReportData([]);
-    addNotification("Generando reporte...", "info", 0);
-
-    try {
-      const appId = process.env.REACT_APP_APP_ID || 'default-app-id';
-      let qRef = collection(db, `artifacts/${appId}/public/data/${reportType}`);
-      let qFilters = [];
-
-      if (startDate) {
-        qFilters.push(where('date', '>=', new Date(startDate)));
-      }
-      if (endDate) {
-        const endDateTime = new Date(endDate);
-        endDateTime.setHours(23, 59, 59, 999);
-        qFilters.push(where('date', '<=', endDateTime));
-      }
-      if (locationFilter) {
-        qFilters.push(where('locationName', '==', locationFilter));
-      }
-
-      const q = query(qRef, ...qFilters);
-      const querySnapshot = await getDocs(q);
-      const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-      const formattedData = data.map(item => {
-        const newItem = { ...item };
-        if (newItem.date && typeof newItem.date.toDate === 'function') {
-          newItem.date = newItem.date.toDate().toLocaleDateString();
-        }
-        if (newItem.createdAt && typeof newItem.createdAt.toDate === 'function') {
-          newItem.createdAt = newItem.createdAt.toDate().toLocaleDateString();
-        }
-        if (newItem.completedAt && typeof newItem.completedAt.toDate === 'function') {
-          newItem.completedAt = newItem.completedAt.toDate().toLocaleDateString();
-        }
-        return newItem;
-      });
-
-      setReportData(formattedData);
-      if (formattedData.length === 0) {
-        addNotification("No se encontraron datos para los filtros seleccionados.", "info");
-      } else {
-        addNotification(`Reporte de ${reportCollections[reportType].name} generado.`, "success");
-      }
-    } catch (error) {
-      console.error("Error al generar reporte:", error);
-      addNotification("Error al generar el reporte: " + error.message, "error");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (userRole !== 'admin') {
-    return (
-      <div className="p-6 text-center text-red-500 bg-gray-900 text-white rounded-lg">
-        No tienes permisos para acceder a esta sección.
-      </div>
-    );
-  }
-
-  return (
-    <div className="container mx-auto p-4 max-w-6xl bg-gray-800 text-gray-100 rounded-lg shadow-xl my-8 border border-gray-700">
-      <h2 className="text-3xl font-bold text-emerald-400 mb-6 border-b-2 border-gray-700 pb-2">Panel de Reportes</h2>
-
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 p-4 bg-gray-700 rounded-lg shadow-inner">
-        <div>
-          <label htmlFor="reportType" className="block text-gray-200 text-sm font-bold mb-2">Tipo de Reporte:</label>
-          <select
-            id="reportType"
-            value={reportType}
-            onChange={(e) => setReportType(e.target.value)}
-            className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-gray-600 text-white"
-          >
-            {Object.entries(reportCollections).map(([key, value]) => (
-              <option key={key} value={key}>{value.name}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label htmlFor="startDate" className="block text-gray-200 text-sm font-bold mb-2">Fecha Inicio:</label>
-          <input
-            type="date"
-            id="startDate"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-            className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-gray-600 text-white"
-          />
-        </div>
-        <div>
-          <label htmlFor="endDate" className="block text-gray-200 text-sm font-bold mb-2">Fecha Fin:</label>
-          <input
-            type="date"
-            id="endDate"
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-            className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-gray-600 text-white"
-          />
-        </div>
-        <div>
-          <label htmlFor="locationFilter" className="block text-gray-200 text-sm font-bold mb-2">Ubicación:</label>
-          <input
-            type="text"
-            id="locationFilter"
-            value={locationFilter}
-            onChange={(e) => setLocationFilter(e.target.value)}
-            placeholder="Ej: Invernadero 1"
-            className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-gray-600 text-white"
-          />
-        </div>
-        <div className="md:col-span-4 flex justify-end items-end">
-          <button
-            onClick={fetchReport}
-            disabled={loading}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-6 rounded-full shadow-lg transition duration-300 ease-in-out transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loading ? 'Generando...' : 'Generar Reporte'}
-          </button>
-        </div>
-      </div>
-
-      {reportData.length > 0 && (
-        <div className="overflow-x-auto rounded-lg shadow-md mt-8">
-          <table className="min-w-full leading-normal">
-            <thead>
-              <tr className="bg-gray-700 border-b border-gray-600">
-                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
-                  {reportCollections[reportType].headers[0]}
-                </th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
-                  {reportCollections[reportType].headers[1]}
-                </th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
-                  {reportCollections[reportType].headers[2]}
-                </th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
-                  {reportCollections[reportType].headers[3]}
-                </th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
-                  {reportCollections[reportType].headers[4]}
-                </th>
-                {reportCollections[reportType].headers.slice(5).map((header, index) => (
-                  <th key={index} className="px-5 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
-                    {header}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {reportData.map((row, rowIndex) => (
-                <tr key={row.id} className="hover:bg-gray-700">
-                  {reportCollections[reportType].fields.map((field, colIndex) => (
-                    <td key={`${row.id}-${field}`} className="px-5 py-5 border-b border-gray-600 bg-gray-800 text-sm">
-                      {field === 'appliedInputs' ? (
-                        <ul className="list-disc list-inside">
-                          {row[field] && row[field].map((input, idx) => (
-                            <li key={idx}>{input.inputName}: {input.quantity} {input.unit} (Total: ${input.subtotal ? input.subtotal.toFixed(2) : '0.00'})</li>
-                          ))}
-                        </ul>
-                      ) : field === 'plannedInputs' ? (
-                        <ul className="list-disc list-inside">
-                          {row[field] && row[field].map((input, idx) => (
-                            <li key={idx}>{input.inputName}: {input.quantity} {input.unit}</li>
-                          ))}
-                        </ul>
-                      ) : field === 'photoUrl' ? (
-                        row[field] ? <a href={row[field]} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline"><img src={row[field]} alt="Foto Reporte" className="w-16 h-16 object-cover rounded-md"/></a> : 'N/A'
-                      ) : field === 'totalCost' || field === 'amount' ? (
-                        <p className="text-gray-100 whitespace-no-wrap">${parseFloat(row[field]).toFixed(2)}</p>
-                      ) : (
-                        <p className="text-gray-100 whitespace-no-wrap">{row[field]}</p>
-                      )}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-      {reportData.length === 0 && loading === false && (
-        <p className="text-center text-gray-300 py-8">Utiliza los filtros para generar un reporte.</p>
-      )}
-    </div>
-  );
-};
-
-
 // Componente para la Gestión de Usuarios
 const UserManagement = () => {
   const { db, auth, userId, isAuthReady, userRole, addNotification } = useContext(AppContext);
@@ -4106,6 +4161,258 @@ const LoginForm = () => {
     </div>
   );
 };
+
+
+// Componente para el Dashboard de Reportes
+const ReportsDashboard = () => {
+  const { db, isAuthReady, userRole, addNotification } = useContext(AppContext);
+  const locations = useLocations(); // Obtiene las ubicaciones disponibles del hook useLocations
+  const [reportType, setReportType] = useState('production_records');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [locationFilter, setLocationFilter] = useState(''); // Ahora contendrá el ID de la ubicación seleccionada
+  const [reportData, setReportData] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  const reportCollections = {
+    'production_records': {
+      name: 'Registros de Producción',
+      fields: ['date', 'locationName', 'productName', 'quantityKg', 'quality'],
+      headers: ['Fecha', 'Ubicación', 'Producto', 'Cantidad (Kg)', 'Calidad']
+    },
+    'input_applications': {
+      name: 'Aplicación de Insumos',
+      fields: ['date', 'locationName', 'objective', 'appliedInputs', 'totalCost'],
+      headers: ['Fecha', 'Ubicación', 'Objetivo', 'Insumos', 'Costo Total ($)']
+    },
+    'labor_records': {
+      name: 'Registros de Labores',
+      fields: ['date', 'locationName', 'laborTypeName', 'observations'],
+      headers: ['Fecha', 'Ubicación', 'Tipo de Labor', 'Observaciones']
+    },
+    'disease_reports': {
+      name: 'Reportes de Enfermedades',
+      fields: ['date', 'locationName', 'diseaseName', 'severity', 'comments', 'photoUrl', 'aiDiagnosisSuggestion'],
+      headers: ['Fecha', 'Ubicación', 'Enfermedad', 'Severidad', 'Comentarios', 'Foto', 'Sug. IA']
+    },
+    'tasks': {
+      name: 'Tareas Asignadas',
+      fields: ['date', 'name', 'laborTypeName', 'locationName', 'assignedToUserName', 'status', 'description', 'plannedInputs'],
+      headers: ['Fecha Límite', 'Tarea', 'Tipo Labor', 'Ubicación', 'Asignado A', 'Estado', 'Descripción', 'Insumos Planificados']
+    },
+    'costs': {
+      name: 'Registros de Costos',
+      fields: ['date', 'type', 'description', 'amount'],
+      headers: ['Fecha', 'Tipo', 'Descripción', 'Monto ($)']
+    },
+  };
+
+  const fetchReport = async () => {
+    if (!db || !isAuthReady) {
+      addNotification("La base de datos no está lista.", "error");
+      return;
+    }
+    if (userRole !== 'admin') {
+      addNotification("No tienes permisos para ver reportes.", "error");
+      return;
+    }
+
+    setLoading(true);
+    setReportData([]);
+    addNotification("Generando reporte...", "info", 0);
+
+    try {
+      const appId = process.env.REACT_APP_APP_ID || 'default-app-id';
+      let qRef = collection(db, `artifacts/${appId}/public/data/${reportType}`);
+      let qFilters = [];
+
+      if (startDate) {
+        qFilters.push(where('date', '>=', new Date(startDate)));
+      }
+      if (endDate) {
+        const endDateTime = new Date(endDate);
+        endDateTime.setHours(23, 59, 59, 999);
+        qFilters.push(where('date', '<=', endDateTime));
+      }
+      // Modificación clave: Si se selecciona una ubicación, filtra por su 'name'
+      if (locationFilter) {
+        const selectedLocation = locations.find(loc => loc.id === locationFilter);
+        if (selectedLocation) {
+          qFilters.push(where('locationName', '==', selectedLocation.name));
+        } else {
+          addNotification("Ubicación seleccionada no válida. No se aplicará el filtro de ubicación.", "warning");
+        }
+      }
+
+      const q = query(qRef, ...qFilters);
+      const querySnapshot = await getDocs(q);
+      const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+      const formattedData = data.map(item => {
+        const newItem = { ...item };
+        if (newItem.date && typeof newItem.date.toDate === 'function') {
+          newItem.date = newItem.date.toDate().toLocaleDateString();
+        }
+        if (newItem.createdAt && typeof newItem.createdAt.toDate === 'function') {
+          newItem.createdAt = newItem.createdAt.toDate().toLocaleDateString();
+        }
+        if (newItem.completedAt && typeof newItem.completedAt.toDate === 'function') {
+          newItem.completedAt = newItem.completedAt.toDate().toLocaleDateString();
+        }
+        return newItem;
+      });
+
+      setReportData(formattedData);
+      if (formattedData.length === 0) {
+        addNotification("No se encontraron datos para los filtros seleccionados.", "info");
+      } else {
+        addNotification(`Reporte de ${reportCollections[reportType].name} generado.`, "success");
+      }
+    } catch (error) {
+      console.error("Error al generar reporte:", error);
+      addNotification("Error al generar el reporte: " + error.message, "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (userRole !== 'admin') {
+    return (
+      <div className="p-6 text-center text-red-500 bg-gray-900 text-white rounded-lg">
+        No tienes permisos para acceder a esta sección.
+      </div>
+    );
+  }
+
+  return (
+    <div className="container mx-auto p-4 max-w-6xl bg-gray-800 text-gray-100 rounded-lg shadow-xl my-8 border border-gray-700">
+      <h2 className="text-3xl font-bold text-emerald-400 mb-6 border-b-2 border-gray-700 pb-2">Panel de Reportes</h2>
+
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 p-4 bg-gray-700 rounded-lg shadow-inner">
+        <div>
+          <label htmlFor="reportType" className="block text-gray-200 text-sm font-bold mb-2">Tipo de Reporte:</label>
+          <select
+            id="reportType"
+            value={reportType}
+            onChange={(e) => setReportType(e.target.value)}
+            className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-gray-600 text-white"
+          >
+            {Object.entries(reportCollections).map(([key, value]) => (
+              <option key={key} value={key}>{value.name}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label htmlFor="startDate" className="block text-gray-200 text-sm font-bold mb-2">Fecha Inicio:</label>
+          <input
+            type="date"
+            id="startDate"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+            className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-gray-600 text-white"
+          />
+        </div>
+        <div>
+          <label htmlFor="endDate" className="block text-gray-200 text-sm font-bold mb-2">Fecha Fin:</label>
+          <input
+            type="date"
+            id="endDate"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+            className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-gray-600 text-white"
+          />
+        </div>
+        <div>
+          <label htmlFor="locationFilter" className="block text-gray-200 text-sm font-bold mb-2">Ubicación:</label>
+          <select // Este es el cambio: de input a select
+            id="locationFilter"
+            value={locationFilter}
+            onChange={(e) => setLocationFilter(e.target.value)}
+            className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-gray-600 text-white"
+          >
+            <option value="">Todas las ubicaciones</option> {/* Opción para no filtrar por ubicación */}
+            {locations.map(loc => (
+              <option key={loc.id} value={loc.id}>{loc.name}</option>
+            ))}
+          </select>
+        </div>
+        <div className="md:col-span-4 flex justify-end items-end">
+          <button
+            onClick={fetchReport}
+            disabled={loading}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-6 rounded-full shadow-lg transition duration-300 ease-in-out transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading ? 'Generando...' : 'Generar Reporte'}
+          </button>
+        </div>
+      </div>
+
+      {reportData.length > 0 && (
+        <div className="overflow-x-auto rounded-lg shadow-md mt-8">
+          <table className="min-w-full leading-normal">
+            <thead>
+              <tr className="bg-gray-700 border-b border-gray-600">
+                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
+                  {reportCollections[reportType].headers[0]}
+                </th>
+                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
+                  {reportCollections[reportType].headers[1]}
+                </th>
+                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
+                  {reportCollections[reportType].headers[2]}
+                </th>
+                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
+                  {reportCollections[reportType].headers[3]}
+                </th>
+                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
+                  {reportCollections[reportType].headers[4]}
+                </th>
+                {reportCollections[reportType].headers.slice(5).map((header, index) => (
+                  <th key={index} className="px-5 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
+                    {header}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {reportData.map((row, rowIndex) => (
+                <tr key={row.id} className="hover:bg-gray-700">
+                  {reportCollections[reportType].fields.map((field, colIndex) => (
+                    <td key={`${row.id}-${field}`} className="px-5 py-5 border-b border-gray-600 bg-gray-800 text-sm">
+                      {field === 'appliedInputs' ? (
+                        <ul className="list-disc list-inside">
+                          {row[field] && row[field].map((input, idx) => (
+                            <li key={idx}>{input.inputName}: {input.quantity} {input.unit} (Total: ${input.subtotal ? input.subtotal.toFixed(2) : '0.00'})</li>
+                          ))}
+                        </ul>
+                      ) : field === 'plannedInputs' ? (
+                        <ul className="list-disc list-inside">
+                          {row[field] && row[field].map((input, idx) => (
+                            <li key={idx}>{input.inputName}: {input.quantity} {input.unit}</li>
+                          ))}
+                        </ul>
+                      ) : field === 'photoUrl' ? (
+                        row[field] ? <a href={row[field]} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline"><img src={row[field]} alt="Foto Reporte" className="w-16 h-16 object-cover rounded-md"/></a> : 'N/A'
+                      ) : field === 'totalCost' || field === 'amount' ? (
+                        <p className="text-gray-100 whitespace-no-wrap">${parseFloat(row[field]).toFixed(2)}</p>
+                      ) : (
+                        <p className="text-gray-100 whitespace-no-wrap">{row[field]}</p>
+                      )}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {reportData.length === 0 && loading === false && (
+        <p className="text-center text-gray-300 py-8">Utiliza los filtros para generar un reporte.</p>
+      )}
+    </div>
+  );
+};
+
 
 
 // Componente principal de la aplicación
