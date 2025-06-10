@@ -1,25 +1,26 @@
 {
-  "short_name": "React App",
-  "name": "Create React App Sample",
+  "short_name": "Frescales", // Cambia esto también si quieres
+  "name": "Aplicación de Gestión de Frescales", // Y esto
   "icons": [
     {
-      "src": "favicon.ico",
+      "src": "favicon.ico", // Asegúrate de que este apunte a tu favicon.ico
       "sizes": "64x64 32x32 24x24 16x16",
       "type": "image/x-icon"
     },
     {
-      "src": "logo192.png",
+      "src": "logo192.png", // Apunta a tu logo192.png
       "type": "image/png",
       "sizes": "192x192"
     },
     {
-      "src": "logo512.png",
+      "src": "logo512.png", // Apunta a tu logo512.png
       "type": "image/png",
       "sizes": "512x512"
     }
   ],
   "start_url": ".",
   "display": "standalone",
-  "theme_color": "#000000",
-  "background_color": "#ffffff"
+  "theme_color": "#1a202c", // Color del tema (modo oscuro)
+  "background_color": "#1a202c" // Color de fondo
+}
 }
