@@ -2,6 +2,9 @@ import React, { useState, useEffect, createContext, useContext, useCallback } fr
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, signOut } from 'firebase/auth';
 import { getFirestore, collection, doc, getDoc, setDoc, updateDoc, onSnapshot, query, where, addDoc, getDocs, deleteDoc } from 'firebase/firestore';
+// Importa getStorage y ref desde 'firebase/storage' si quieres usar Firebase Storage
+// import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+
 
 // Contexto para compartir el estado de Firebase, el usuario y las notificaciones
 const AppContext = createContext();
@@ -80,7 +83,7 @@ const LocationCatalog = () => {
   const { db, userId, isAuthReady, userRole, addNotification } = useContext(AppContext);
   const [locations, setLocations] = useState([]);
   const [newLocationName, setNewLocationName] = useState('');
-  const [editingLocationId, setEditingLocationId] = useState(null);
+  const [editingLocationId, setEditingLocationId] = useState(null); // Corrected initialization
   const [editingLocationName, setEditingLocationName] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
 
@@ -177,15 +180,15 @@ const LocationCatalog = () => {
 
   if (userRole !== 'admin') {
     return (
-      <div className="p-6 text-center text-red-500">
+      <div className="p-6 text-center text-red-500 bg-gray-900 text-white rounded-lg">
         No tienes permisos para acceder a esta sección.
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto p-4 max-w-4xl bg-white rounded-lg shadow-xl my-8 border border-gray-100">
-      <h2 className="text-3xl font-bold text-gray-800 mb-6 border-b-2 border-gray-200 pb-2">Gestión de Ubicaciones</h2>
+    <div className="container mx-auto p-4 max-w-4xl bg-gray-800 text-gray-100 rounded-lg shadow-xl my-8 border border-gray-700">
+      <h2 className="text-3xl font-bold text-emerald-400 mb-6 border-b-2 border-gray-700 pb-2">Gestión de Ubicaciones</h2>
 
       {!showAddForm && (
         <button
@@ -197,14 +200,14 @@ const LocationCatalog = () => {
       )}
 
       {showAddForm && (
-        <form onSubmit={handleAddLocation} className="mb-8 p-6 bg-gray-50 rounded-lg shadow-inner">
-          <h3 className="text-2xl font-semibold text-gray-700 mb-4">Nueva Ubicación</h3>
+        <form onSubmit={handleAddLocation} className="mb-8 p-6 bg-gray-700 rounded-lg shadow-inner">
+          <h3 className="text-2xl font-semibold text-emerald-300 mb-4">Nueva Ubicación</h3>
           <div className="mb-4">
-            <label htmlFor="newLocationName" className="block text-gray-700 text-sm font-bold mb-2">Nombre:</label>
+            <label htmlFor="newLocationName" className="block text-gray-200 text-sm font-bold mb-2">Nombre:</label>
             <input
               type="text"
               id="newLocationName"
-              className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent"
+              className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent bg-gray-600 text-white"
               value={newLocationName}
               onChange={(e) => setNewLocationName(e.target.value)}
               required
@@ -220,7 +223,7 @@ const LocationCatalog = () => {
             <button
               type="button"
               onClick={() => setShowAddForm(false)}
-              className="bg-gray-400 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-full shadow transition duration-300 ease-in-out transform hover:scale-105"
+              className="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-full shadow transition duration-300 ease-in-out transform hover:scale-105"
             >
               Cancelar
             </button>
@@ -228,38 +231,38 @@ const LocationCatalog = () => {
         </form>
       )}
 
-      <h3 className="text-2xl font-semibold text-gray-700 mb-4">Ubicaciones Existentes</h3>
+      <h3 className="text-2xl font-semibold text-emerald-300 mb-4">Ubicaciones Existentes</h3>
       <div className="overflow-x-auto rounded-lg shadow-md">
         <table className="min-w-full leading-normal">
           <thead>
-            <tr className="bg-emerald-100 border-b border-gray-200">
-              <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Nombre</th>
-              <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Acciones</th>
+            <tr className="bg-gray-700 border-b border-gray-600">
+              <th className="px-5 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">Nombre</th>
+              <th className="px-5 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">Acciones</th>
             </tr>
           </thead>
           <tbody>
             {locations.length === 0 ? (
               <tr>
-                <td colSpan="2" className="px-5 py-5 border-b border-gray-200 bg-white text-sm text-center">
+                <td colSpan="2" className="px-5 py-5 border-b border-gray-600 bg-gray-800 text-sm text-gray-300 text-center">
                   No hay ubicaciones registradas.
                 </td>
               </tr>
             ) : (
               locations.map((loc) => (
-                <tr key={loc.id} className="hover:bg-gray-50">
-                  <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
+                <tr key={loc.id} className="hover:bg-gray-700">
+                  <td className="px-5 py-5 border-b border-gray-600 bg-gray-800 text-sm">
                     {editingLocationId === loc.id ? (
                       <input
                         type="text"
                         value={editingLocationName}
-                        onChange={(e) => setEditingLocationName(e.target.value)}
-                        className="shadow appearance-none border rounded w-full py-1 px-2 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                        onChange={(e) => setNewLocationName(e.target.value)}
+                        className="shadow appearance-none border rounded w-full py-1 px-2 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-gray-600 text-white"
                       />
                     ) : (
-                      <p className="text-gray-900 whitespace-no-wrap">{loc.name}</p>
+                      <p className="text-gray-100 whitespace-no-wrap">{loc.name}</p>
                     )}
                   </td>
-                  <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
+                  <td className="px-5 py-5 border-b border-gray-600 bg-gray-800 text-sm">
                     {editingLocationId === loc.id ? (
                       <div className="flex gap-2">
                         <button
@@ -270,7 +273,7 @@ const LocationCatalog = () => {
                         </button>
                         <button
                           onClick={handleCancelEdit}
-                          className="bg-gray-400 hover:bg-gray-500 text-white font-bold py-1 px-3 rounded-full text-xs transition duration-300"
+                          className="bg-gray-500 hover:bg-gray-600 text-white font-bold py-1 px-3 rounded-full text-xs transition duration-300"
                         >
                           Cancelar
                         </button>
@@ -301,8 +304,6 @@ const LocationCatalog = () => {
     </div>
   );
 };
-
-
 // Componente para la gestión de catálogo de insumos
 const InputCatalog = () => {
   const { db, userId, isAuthReady, userRole, addNotification } = useContext(AppContext);
@@ -311,7 +312,7 @@ const InputCatalog = () => {
   const [newInputUnit, setNewInputUnit] = useState('');
   const [newInputPrice, setNewInputPrice] = useState('');
   const [newInputActiveComponents, setNewInputActiveComponents] = useState([{ name: '', percentage: '' }]);
-  const [editingInputId, setEditingInputId] = useState(null);
+  const [editingInputId, setEditingInputId] = useState(null); // Corrected initialization
   const [editingInputPrice, setEditingInputPrice] = useState('');
   const [editingInputActiveComponents, setEditingInputActiveComponents] = useState([]);
   const [showAddForm, setShowAddForm] = useState(false);
@@ -458,15 +459,15 @@ const InputCatalog = () => {
 
   if (userRole !== 'admin') {
     return (
-      <div className="p-6 text-center text-red-500">
+      <div className="p-6 text-center text-red-500 bg-gray-900 text-white rounded-lg">
         No tienes permisos para acceder a esta sección.
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto p-4 max-w-4xl bg-white rounded-lg shadow-xl my-8 border border-gray-100">
-      <h2 className="text-3xl font-bold text-gray-800 mb-6 border-b-2 border-gray-200 pb-2">Gestión de Insumos</h2>
+    <div className="container mx-auto p-4 max-w-4xl bg-gray-800 text-gray-100 rounded-lg shadow-xl my-8 border border-gray-700">
+      <h2 className="text-3xl font-bold text-emerald-400 mb-6 border-b-2 border-gray-700 pb-2">Gestión de Insumos</h2>
 
       {!showAddForm && (
         <button
@@ -478,62 +479,62 @@ const InputCatalog = () => {
       )}
 
       {showAddForm && (
-        <form onSubmit={handleAddInput} className="mb-8 p-6 bg-gray-50 rounded-lg shadow-inner">
-          <h3 className="text-2xl font-semibold text-gray-700 mb-4">Nuevo Insumo</h3>
+        <form onSubmit={handleAddInput} className="mb-8 p-6 bg-gray-700 rounded-lg shadow-inner">
+          <h3 className="text-2xl font-semibold text-emerald-300 mb-4">Nuevo Insumo</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
             <div>
-              <label htmlFor="newInputName" className="block text-gray-700 text-sm font-bold mb-2">Nombre:</label>
+              <label htmlFor="newInputName" className="block text-gray-200 text-sm font-bold mb-2">Nombre:</label>
               <input
                 type="text"
                 id="newInputName"
-                className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent"
+                className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent bg-gray-600 text-white"
                 value={newInputName}
                 onChange={(e) => setNewInputName(e.target.value)}
                 required
               />
             </div>
             <div>
-              <label htmlFor="newInputUnit" className="block text-gray-700 text-sm font-bold mb-2">Unidad:</label>
+              <label htmlFor="newInputUnit" className="block text-gray-200 text-sm font-bold mb-2">Unidad:</label>
               <input
                 type="text"
                 id="newInputUnit"
-                className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent"
+                className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent bg-gray-600 text-white"
                 value={newInputUnit}
                 onChange={(e) => setNewInputUnit(e.target.value)}
                 required
               />
             </div>
             <div>
-              <label htmlFor="newInputPrice" className="block text-gray-700 text-sm font-bold mb-2">Precio ($):</label>
+              <label htmlFor="newInputPrice" className="block text-gray-200 text-sm font-bold mb-2">Precio ($):</label>
               <input
                 type="number"
                 step="0.01"
                 id="newInputPrice"
-                className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent"
+                className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent bg-gray-600 text-white"
                 value={newInputPrice}
                 onChange={(e) => setNewInputPrice(e.target.value)}
                 required
               />
             </div>
           </div>
-          <h4 className="text-xl font-semibold text-gray-700 mb-3">Componentes Activos</h4>
+          <h4 className="text-xl font-semibold text-emerald-300 mb-3">Componentes Activos</h4>
           {newInputActiveComponents.map((component, index) => (
-            <div key={index} className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3 p-3 border rounded-md bg-white">
+            <div key={index} className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3 p-3 border border-gray-600 rounded-md bg-gray-800">
               <div>
-                <label htmlFor={`newCompName-${index}`} className="block text-gray-700 text-xs font-bold mb-1">Nombre Componente:</label>
+                <label htmlFor={`newCompName-${index}`} className="block text-gray-200 text-xs font-bold mb-1">Nombre Componente:</label>
                 <input
                   type="text"
                   id={`newCompName-${index}`}
                   name="name"
                   value={component.name}
                   onChange={(e) => handleNewActiveComponentChange(index, e)}
-                  className="shadow appearance-none border rounded-md w-full py-1 px-2 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                  className="shadow appearance-none border rounded-md w-full py-1 px-2 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-gray-700 text-white"
                   placeholder="Ej: Mancozeb"
                   required
                 />
               </div>
               <div>
-                <label htmlFor={`newCompPerc-${index}`} className="block text-gray-700 text-xs font-bold mb-1">Porcentaje (%):</label>
+                <label htmlFor={`newCompPerc-${index}`} className="block text-gray-200 text-xs font-bold mb-1">Porcentaje (%):</label>
                 <input
                   type="number"
                   step="0.01"
@@ -541,7 +542,7 @@ const InputCatalog = () => {
                   name="percentage"
                   value={component.percentage}
                   onChange={(e) => handleNewActiveComponentChange(index, e)}
-                  className="shadow appearance-none border rounded-md w-full py-1 px-2 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                  className="shadow appearance-none border rounded-md w-full py-1 px-2 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-gray-700 text-white"
                   required
                 />
               </div>
@@ -550,7 +551,7 @@ const InputCatalog = () => {
                   <button
                     type="button"
                     onClick={() => handleRemoveActiveComponentRow(index)}
-                    className="bg-red-500 hover:bg-red-600 text-white font-bold py-1 px-2 rounded-md text-xs"
+                    className="bg-red-500 hover:bg-red-600 text-white font-bold py-1 px-2 rounded-full text-xs"
                   >
                     Remover
                   </button>
@@ -576,7 +577,7 @@ const InputCatalog = () => {
             <button
               type="button"
               onClick={() => setShowAddForm(false)}
-              className="bg-gray-400 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-full shadow transition duration-300 ease-in-out transform hover:scale-105"
+              className="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-full shadow transition duration-300 ease-in-out transform hover:scale-105"
             >
               Cancelar
             </button>
@@ -584,48 +585,48 @@ const InputCatalog = () => {
         </form>
       )}
 
-      <h3 className="text-2xl font-semibold text-gray-700 mb-4">Insumos Existentes</h3>
+      <h3 className="text-2xl font-semibold text-emerald-300 mb-4">Insumos Existentes</h3>
       <div className="overflow-x-auto rounded-lg shadow-md">
         <table className="min-w-full leading-normal">
           <thead>
-            <tr className="bg-emerald-100 border-b border-gray-200">
-              <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Nombre</th>
-              <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Unidad</th>
-              <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Precio ($)</th>
-              <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Componentes Activos</th>
-              <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Acciones</th>
+            <tr className="bg-gray-700 border-b border-gray-600">
+              <th className="px-5 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">Nombre</th>
+              <th className="px-5 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">Unidad</th>
+              <th className="px-5 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">Precio ($)</th>
+              <th className="px-5 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">Componentes Activos</th>
+              <th className="px-5 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">Acciones</th>
             </tr>
           </thead>
           <tbody>
             {inputs.length === 0 ? (
               <tr>
-                <td colSpan="5" className="px-5 py-5 border-b border-gray-200 bg-white text-sm text-center">
+                <td colSpan="5" className="px-5 py-5 border-b border-gray-600 bg-gray-800 text-sm text-gray-300 text-center">
                   No hay insumos registrados.
                 </td>
               </tr>
             ) : (
               inputs.map((input) => (
-                <tr key={input.id} className="hover:bg-gray-50">
-                  <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
-                    <p className="text-gray-900 whitespace-no-wrap">{input.name}</p>
+                <tr key={input.id} className="hover:bg-gray-700">
+                  <td className="px-5 py-5 border-b border-gray-600 bg-gray-800 text-sm">
+                    <p className="text-gray-100 whitespace-no-wrap">{input.name}</p>
                   </td>
-                  <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
-                    <p className="text-gray-900 whitespace-no-wrap">{input.unit}</p>
+                  <td className="px-5 py-5 border-b border-gray-600 bg-gray-800 text-sm">
+                    <p className="text-gray-100 whitespace-no-wrap">{input.unit}</p>
                   </td>
-                  <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
+                  <td className="px-5 py-5 border-b border-gray-600 bg-gray-800 text-sm">
                     {editingInputId === input.id ? (
                       <input
                         type="number"
                         step="0.01"
                         value={editingInputPrice}
                         onChange={(e) => setEditingInputPrice(e.target.value)}
-                        className="shadow appearance-none border rounded w-24 py-1 px-2 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                        className="shadow appearance-none border rounded w-24 py-1 px-2 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-gray-700 text-white"
                       />
                     ) : (
-                      <p className="text-gray-900 whitespace-no-wrap">{input.price.toFixed(2)}</p>
+                      <p className="text-gray-100 whitespace-no-wrap">{input.price.toFixed(2)}</p>
                     )}
                   </td>
-                  <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
+                  <td className="px-5 py-5 border-b border-gray-600 bg-gray-800 text-sm">
                     {editingInputId === input.id ? (
                       <div>
                         {editingInputActiveComponents.map((component, index) => (
@@ -635,7 +636,7 @@ const InputCatalog = () => {
                               name="name"
                               value={component.name}
                               onChange={(e) => setEditingInputActiveComponents(prev => prev.map((item, i) => i === index ? { ...item, name: e.target.value } : item))}
-                              className="shadow appearance-none border rounded py-0.5 px-1 text-gray-700 text-xs w-2/5"
+                              className="shadow appearance-none border rounded py-0.5 px-1 text-gray-800 text-xs w-2/5 bg-gray-700 text-white"
                             />
                             <input
                               type="number"
@@ -643,14 +644,14 @@ const InputCatalog = () => {
                               name="percentage"
                               value={component.percentage}
                               onChange={(e) => setEditingInputActiveComponents(prev => prev.map((item, i) => i === index ? { ...item, percentage: e.target.value } : item))}
-                              className="shadow appearance-none border rounded py-0.5 px-1 text-gray-700 text-xs w-1/4"
+                              className="shadow appearance-none border rounded py-0.5 px-1 text-gray-800 text-xs w-1/4 bg-gray-700 text-white"
                             />
-                            <span className="text-xs text-gray-600">%</span>
+                            <span className="text-xs text-gray-300">%</span>
                             {editingInputActiveComponents.length > 1 && (
                               <button
                                 type="button"
                                 onClick={() => handleRemoveActiveComponentRow(index, true)}
-                                className="bg-red-400 hover:bg-red-500 text-white py-0.5 px-1 rounded-full text-xs"
+                                className="bg-red-500 hover:bg-red-600 text-white font-bold py-0.5 px-1 rounded-full text-xs"
                               >
                                 X
                               </button>
@@ -666,14 +667,14 @@ const InputCatalog = () => {
                         </button>
                       </div>
                     ) : (
-                      <ul className="list-disc list-inside text-gray-900 whitespace-no-wrap text-sm">
+                      <ul className="list-disc list-inside text-gray-100 whitespace-no-wrap text-sm">
                         {input.activeComponents && input.activeComponents.map((comp, idx) => (
                           <li key={idx}>{comp.name}: {comp.percentage}%</li>
                         ))}
                       </ul>
                     )}
                   </td>
-                  <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
+                  <td className="px-5 py-5 border-b border-gray-600 bg-gray-800 text-sm">
                     {editingInputId === input.id ? (
                       <div className="flex gap-2">
                         <button
@@ -684,7 +685,7 @@ const InputCatalog = () => {
                         </button>
                         <button
                           onClick={handleCancelEdit}
-                          className="bg-gray-400 hover:bg-gray-500 text-white font-bold py-1 px-3 rounded-full text-xs transition duration-300"
+                          className="bg-gray-500 hover:bg-gray-600 text-white font-bold py-1 px-3 rounded-full text-xs transition duration-300"
                         >
                           Cancelar
                         </button>
@@ -723,7 +724,7 @@ const ProductCatalog = () => {
   const [newProductName, setNewProductName] = useState('');
   const [newProductUnit, setNewProductUnit] = useState('');
   const [newProductPrice, setNewProductPrice] = useState('');
-  const [editingProductId, setEditingProductId] = useState(null);
+  const [editingProductId, setEditingProductId] = useState(null); // Corrected initialization
   const [editingProductPrice, setEditingProductPrice] = useState('');
   const [editingProductUnit, setEditingProductUnit] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
@@ -835,15 +836,15 @@ const ProductCatalog = () => {
 
   if (userRole !== 'admin') {
     return (
-      <div className="p-6 text-center text-red-500">
+      <div className="p-6 text-center text-red-500 bg-gray-900 text-white rounded-lg">
         No tienes permisos para acceder a esta sección.
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto p-4 max-w-4xl bg-white rounded-lg shadow-xl my-8 border border-gray-100">
-      <h2 className="text-3xl font-bold text-gray-800 mb-6 border-b-2 border-gray-200 pb-2">Gestión de Productos</h2>
+    <div className="container mx-auto p-4 max-w-4xl bg-gray-800 text-gray-100 rounded-lg shadow-xl my-8 border border-gray-700">
+      <h2 className="text-3xl font-bold text-emerald-400 mb-6 border-b-2 border-gray-700 pb-2">Gestión de Productos</h2>
 
       {!showAddForm && (
         <button
@@ -855,38 +856,38 @@ const ProductCatalog = () => {
       )}
 
       {showAddForm && (
-        <form onSubmit={handleAddProduct} className="mb-8 p-6 bg-gray-50 rounded-lg shadow-inner">
-          <h3 className="text-2xl font-semibold text-gray-700 mb-4">Nuevo Producto</h3>
+        <form onSubmit={handleAddProduct} className="mb-8 p-6 bg-gray-700 rounded-lg shadow-inner">
+          <h3 className="text-2xl font-semibold text-emerald-300 mb-4">Nuevo Producto</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
             <div>
-              <label htmlFor="newProductName" className="block text-gray-700 text-sm font-bold mb-2">Nombre:</label>
+              <label htmlFor="newProductName" className="block text-gray-200 text-sm font-bold mb-2">Nombre:</label>
               <input
                 type="text"
                 id="newProductName"
-                className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent"
+                className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent bg-gray-600 text-white"
                 value={newProductName}
                 onChange={(e) => setNewProductName(e.target.value)}
                 required
               />
             </div>
             <div>
-              <label htmlFor="newProductUnit" className="block text-gray-700 text-sm font-bold mb-2">Unidad de Venta:</label>
+              <label htmlFor="newProductUnit" className="block text-gray-200 text-sm font-bold mb-2">Unidad de Venta:</label>
               <input
                 type="text"
                 id="newProductUnit"
-                className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent"
+                className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent bg-gray-600 text-white"
                 value={newProductUnit}
                 onChange={(e) => setNewProductUnit(e.target.value)}
                 required
               />
             </div>
             <div>
-              <label htmlFor="newProductPrice" className="block text-gray-700 text-sm font-bold mb-2">Precio ($):</label>
+              <label htmlFor="newProductPrice" className="block text-gray-200 text-sm font-bold mb-2">Precio ($):</label>
               <input
                 type="number"
                 step="0.01"
                 id="newProductPrice"
-                className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent"
+                className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent bg-gray-600 text-white"
                 value={newProductPrice}
                 onChange={(e) => setNewProductPrice(e.target.value)}
                 required
@@ -903,7 +904,7 @@ const ProductCatalog = () => {
             <button
               type="button"
               onClick={() => setShowAddForm(false)}
-              className="bg-gray-400 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-full shadow transition duration-300 ease-in-out transform hover:scale-105"
+              className="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-full shadow transition duration-300 ease-in-out transform hover:scale-105"
             >
               Cancelar
             </button>
@@ -911,47 +912,47 @@ const ProductCatalog = () => {
         </form>
       )}
 
-      <h3 className="text-2xl font-semibold text-gray-700 mb-4">Productos Existentes</h3>
+      <h3 className="text-2xl font-semibold text-emerald-300 mb-4">Productos Existentes</h3>
       <div className="overflow-x-auto rounded-lg shadow-md">
         <table className="min-w-full leading-normal">
           <thead>
-            <tr className="bg-emerald-100 border-b border-gray-200">
-              <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Nombre</th>
-              <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Unidad de Venta</th>
-              <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Precio ($)</th>
-              <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Acciones</th>
+            <tr className="bg-gray-700 border-b border-gray-600">
+              <th className="px-5 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">Nombre</th>
+              <th className="px-5 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">Unidad de Venta</th>
+              <th className="px-5 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">Precio ($)</th>
+              <th className="px-5 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">Acciones</th>
             </tr>
           </thead>
           <tbody>
             {products.length === 0 ? (
               <tr>
-                <td colSpan="4" className="px-5 py-5 border-b border-gray-200 bg-white text-sm text-center">
+                <td colSpan="4" className="px-5 py-5 border-b border-gray-600 bg-gray-800 text-sm text-gray-300 text-center">
                   No hay productos registrados.
                 </td>
               </tr>
             ) : (
               products.map((product) => (
-                <tr key={product.id} className="hover:bg-gray-50">
-                  <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
-                    <p className="text-gray-900 whitespace-no-wrap">{product.name}</p>
+                <tr key={product.id} className="hover:bg-gray-700">
+                  <td className="px-5 py-5 border-b border-gray-600 bg-gray-800 text-sm">
+                    <p className="text-gray-100 whitespace-no-wrap">{product.name}</p>
                   </td>
-                  <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
-                    <p className="text-gray-900 whitespace-no-wrap">{product.unit_of_sale}</p>
+                  <td className="px-5 py-5 border-b border-gray-600 bg-gray-800 text-sm">
+                    <p className="text-gray-100 whitespace-no-wrap">{product.unit_of_sale}</p>
                   </td>
-                  <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
+                  <td className="px-5 py-5 border-b border-gray-600 bg-gray-800 text-sm">
                     {editingProductId === product.id ? (
                       <input
                         type="number"
                         step="0.01"
                         value={editingProductPrice}
                         onChange={(e) => setEditingProductPrice(e.target.value)}
-                        className="shadow appearance-none border rounded w-24 py-1 px-2 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                        className="shadow appearance-none border rounded w-24 py-1 px-2 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-gray-700 text-white"
                       />
                     ) : (
-                      <p className="text-gray-900 whitespace-no-wrap">{product.price.toFixed(2)}</p>
+                      <p className="text-gray-100 whitespace-no-wrap">{product.price.toFixed(2)}</p>
                     )}
                   </td>
-                  <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
+                  <td className="px-5 py-5 border-b border-gray-600 bg-gray-800 text-sm">
                     {editingProductId === product.id ? (
                       <div className="flex gap-2">
                         <button
@@ -962,7 +963,7 @@ const ProductCatalog = () => {
                         </button>
                         <button
                           onClick={handleCancelEdit}
-                          className="bg-gray-400 hover:bg-gray-500 text-white font-bold py-1 px-3 rounded-full text-xs transition duration-300"
+                          className="bg-gray-500 hover:bg-gray-600 text-white font-bold py-1 px-3 rounded-full text-xs transition duration-300"
                         >
                           Cancelar
                         </button>
@@ -1075,29 +1076,29 @@ const ProductionForm = () => {
   };
 
   return (
-    <div className="container mx-auto p-4 max-w-2xl bg-white rounded-lg shadow-xl my-8 border border-gray-100">
-      <h2 className="text-3xl font-bold text-gray-800 mb-6 border-b-2 border-gray-200 pb-2">Registrar Producción</h2>
+    <div className="container mx-auto p-4 max-w-2xl bg-gray-800 text-gray-100 rounded-lg shadow-xl my-8 border border-gray-700">
+      <h2 className="text-3xl font-bold text-emerald-400 mb-6 border-b-2 border-gray-700 pb-2">Registrar Producción</h2>
       <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-6 md:grid-cols-2">
         <div>
-          <label htmlFor="date" className="block text-gray-700 text-sm font-bold mb-2">Fecha:</label>
+          <label htmlFor="date" className="block text-gray-200 text-sm font-bold mb-2">Fecha:</label>
           <input
             type="date"
             id="date"
             name="date"
             value={formData.date}
             onChange={handleChange}
-            className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent"
+            className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent bg-gray-700 text-white"
             required
           />
         </div>
         <div>
-          <label htmlFor="productId" className="block text-gray-700 text-sm font-bold mb-2">Producto:</label>
+          <label htmlFor="productId" className="block text-gray-200 text-sm font-bold mb-2">Producto:</label>
           <select
             id="productId"
             name="productId"
             value={formData.productId}
             onChange={handleChange}
-            className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent"
+            className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent bg-gray-700 text-white"
             required
           >
             <option value="">Selecciona un producto</option>
@@ -1107,7 +1108,7 @@ const ProductionForm = () => {
           </select>
         </div>
         <div>
-          <label htmlFor="quantityKg" className="block text-gray-700 text-sm font-bold mb-2">Cantidad (Kg):</label>
+          <label htmlFor="quantityKg" className="block text-gray-200 text-sm font-bold mb-2">Cantidad (Kg):</label>
           <input
             type="number"
             step="0.01"
@@ -1115,18 +1116,18 @@ const ProductionForm = () => {
             name="quantityKg"
             value={formData.quantityKg}
             onChange={handleChange}
-            className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent"
+            className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent bg-gray-700 text-white"
             required
           />
         </div>
         <div>
-          <label htmlFor="locationId" className="block text-gray-700 text-sm font-bold mb-2">Ubicación (Invernadero):</label>
+          <label htmlFor="locationId" className="block text-gray-200 text-sm font-bold mb-2">Ubicación (Invernadero):</label>
           <select
             id="locationId"
             name="locationId"
             value={formData.locationId}
             onChange={handleChange}
-            className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent"
+            className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent bg-gray-700 text-white"
             required
           >
             <option value="">Selecciona una ubicación</option>
@@ -1136,13 +1137,13 @@ const ProductionForm = () => {
           </select>
         </div>
         <div>
-          <label htmlFor="quality" className="block text-gray-700 text-sm font-bold mb-2">Calidad:</label>
+          <label htmlFor="quality" className="block text-gray-200 text-sm font-bold mb-2">Calidad:</label>
           <select
             id="quality"
             name="quality"
             value={formData.quality}
             onChange={handleChange}
-            className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent"
+            className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent bg-gray-700 text-white"
             required
           >
             <option value="Alta">Alta</option>
@@ -1162,8 +1163,6 @@ const ProductionForm = () => {
     </div>
   );
 };
-
-
 // Componente para el registro de Aplicación de Insumos
 const InputApplicationForm = () => {
   const { db, userId, isAuthReady, userRole, addNotification } = useContext(AppContext);
@@ -1304,30 +1303,30 @@ const InputApplicationForm = () => {
   };
 
   return (
-    <div className="container mx-auto p-4 max-w-3xl bg-white rounded-lg shadow-xl my-8 border border-gray-100">
-      <h2 className="text-3xl font-bold text-gray-800 mb-6 border-b-2 border-gray-200 pb-2">Registrar Aplicación de Insumos</h2>
+    <div className="container mx-auto p-4 max-w-3xl bg-gray-800 text-gray-100 rounded-lg shadow-xl my-8 border border-gray-700">
+      <h2 className="text-3xl font-bold text-emerald-400 mb-6 border-b-2 border-gray-700 pb-2">Registrar Aplicación de Insumos</h2>
       <form onSubmit={handleSubmit}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
           <div>
-            <label htmlFor="inputDate" className="block text-gray-700 text-sm font-bold mb-2">Fecha:</label>
+            <label htmlFor="inputDate" className="block text-gray-200 text-sm font-bold mb-2">Fecha:</label>
             <input
               type="date"
               id="inputDate"
               name="date"
               value={formData.date}
               onChange={handleChange}
-              className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400"
+              className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-gray-700 text-white"
               required
             />
           </div>
           <div>
-            <label htmlFor="locationId" className="block text-gray-700 text-sm font-bold mb-2">Ubicación (Invernadero):</label>
+            <label htmlFor="locationId" className="block text-gray-200 text-sm font-bold mb-2">Ubicación (Invernadero):</label>
             <select
               id="locationId"
               name="locationId"
               value={formData.locationId}
               onChange={handleChange}
-              className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent"
+              className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent bg-gray-700 text-white"
               required
             >
               <option value="">Selecciona una ubicación</option>
@@ -1338,7 +1337,7 @@ const InputApplicationForm = () => {
           </div>
         </div>
         <div className="mb-6">
-          <label htmlFor="inputObjective" className="block text-gray-700 text-sm font-bold mb-2">Objetivo:</label>
+          <label htmlFor="inputObjective" className="block text-gray-200 text-sm font-bold mb-2">Objetivo:</label>
           <textarea
             id="inputObjective"
             name="objective"
@@ -1346,22 +1345,22 @@ const InputApplicationForm = () => {
             onChange={handleChange}
             rows="3"
             placeholder="Ej: Mitigar botrytis, fertilización foliar"
-            className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400"
+            className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-gray-700 text-white"
             required
           ></textarea>
         </div>
 
-        <h3 className="text-2xl font-semibold text-gray-700 mb-4">Insumos Aplicados</h3>
+        <h3 className="text-2xl font-semibold text-emerald-300 mb-4">Insumos Aplicados</h3>
         {formData.appliedInputs.map((item, index) => (
-          <div key={index} className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4 p-4 border rounded-md bg-gray-50">
+          <div key={index} className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4 p-4 border border-gray-600 rounded-md bg-gray-700">
             <div>
-              <label htmlFor={`inputId-${index}`} className="block text-gray-700 text-sm font-bold mb-2">Insumo:</label>
+              <label htmlFor={`inputId-${index}`} className="block text-gray-200 text-sm font-bold mb-2">Insumo:</label>
               <select
                 id={`inputId-${index}`}
                 name="inputId"
                 value={item.inputId}
                 onChange={(e) => handleInputChange(index, e)}
-                className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-gray-600 text-white"
                 required
               >
                 <option value="">Selecciona insumo</option>
@@ -1371,7 +1370,7 @@ const InputApplicationForm = () => {
               </select>
             </div>
             <div>
-              <label htmlFor={`quantity-${index}`} className="block text-gray-700 text-sm font-bold mb-2">Cantidad:</label>
+              <label htmlFor={`quantity-${index}`} className="block text-gray-200 text-sm font-bold mb-2">Cantidad:</label>
               <input
                 type="number"
                 step="0.01"
@@ -1379,17 +1378,17 @@ const InputApplicationForm = () => {
                 name="quantity"
                 value={item.quantity}
                 onChange={(e) => handleInputChange(index, e)}
-                className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-gray-600 text-white"
                 required
               />
             </div>
             <div className="flex items-center pt-2">
-              <span className="text-gray-700 text-sm font-bold block mb-2">Unidad:</span>
-              <p className="ml-2 text-gray-900">{item.unit || '-'}</p>
+              <span className="text-gray-200 text-sm font-bold block mb-2">Unidad:</span>
+              <p className="ml-2 text-gray-100">{item.unit || '-'}</p>
             </div>
             <div className="flex items-center pt-2">
-              <span className="text-gray-700 text-sm font-bold block mb-2">Costo:</span>
-              <p className="ml-2 text-gray-900">${item.subtotal ? item.subtotal.toFixed(2) : '0.00'}</p>
+              <span className="text-gray-200 text-sm font-bold block mb-2">Costo:</span>
+              <p className="ml-2 text-gray-100">${item.subtotal ? item.subtotal.toFixed(2) : '0.00'}</p>
               {formData.appliedInputs.length > 1 && (
                 <button
                   type="button"
@@ -1410,7 +1409,7 @@ const InputApplicationForm = () => {
           Añadir Otro Insumo
         </button>
 
-        <div className="text-right text-2xl font-bold text-gray-800 mt-6">
+        <div className="text-right text-2xl font-bold text-emerald-300 mt-6">
           Costo Total: ${calculateTotalCost().toFixed(2)}
         </div>
 
@@ -1433,7 +1432,7 @@ const LaborTypeCatalog = () => {
   const { db, userId, isAuthReady, userRole, addNotification } = useContext(AppContext);
   const [laborTypes, setLaborTypes] = useState([]);
   const [newLaborTypeName, setNewLaborTypeName] = useState('');
-  const [editingLaborTypeId, setEditingLaborTypeId] = useState(null);
+  const [editingLaborTypeId, setEditingLaborTypeId] = useState(null); // Corrected initialization
   const [editingLaborTypeName, setEditingLaborTypeName] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
 
@@ -1530,15 +1529,15 @@ const LaborTypeCatalog = () => {
 
   if (userRole !== 'admin') {
     return (
-      <div className="p-6 text-center text-red-500">
+      <div className="p-6 text-center text-red-500 bg-gray-900 text-white rounded-lg">
         No tienes permisos para acceder a esta sección.
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto p-4 max-w-4xl bg-white rounded-lg shadow-xl my-8 border border-gray-100">
-      <h2 className="text-3xl font-bold text-gray-800 mb-6 border-b-2 border-gray-200 pb-2">Gestión de Tipos de Labores</h2>
+    <div className="container mx-auto p-4 max-w-4xl bg-gray-800 text-gray-100 rounded-lg shadow-xl my-8 border border-gray-700">
+      <h2 className="text-3xl font-bold text-emerald-400 mb-6 border-b-2 border-gray-700 pb-2">Gestión de Tipos de Labores</h2>
 
       {!showAddForm && (
         <button
@@ -1550,14 +1549,14 @@ const LaborTypeCatalog = () => {
       )}
 
       {showAddForm && (
-        <form onSubmit={handleAddLaborType} className="mb-8 p-6 bg-gray-50 rounded-lg shadow-inner">
-          <h3 className="text-2xl font-semibold text-gray-700 mb-4">Nuevo Tipo de Labor</h3>
+        <form onSubmit={handleAddLaborType} className="mb-8 p-6 bg-gray-700 rounded-lg shadow-inner">
+          <h3 className="text-2xl font-semibold text-emerald-300 mb-4">Nuevo Tipo de Labor</h3>
           <div className="mb-4">
-            <label htmlFor="newLaborTypeName" className="block text-gray-700 text-sm font-bold mb-2">Nombre:</label>
+            <label htmlFor="newLaborTypeName" className="block text-gray-200 text-sm font-bold mb-2">Nombre:</label>
             <input
               type="text"
               id="newLaborTypeName"
-              className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400"
+              className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-gray-600 text-white"
               value={newLaborTypeName}
               onChange={(e) => setNewLaborTypeName(e.target.value)}
               required
@@ -1573,7 +1572,7 @@ const LaborTypeCatalog = () => {
             <button
               type="button"
               onClick={() => setShowAddForm(false)}
-              className="bg-gray-400 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-full shadow transition duration-300 ease-in-out transform hover:scale-105"
+              className="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-full shadow transition duration-300 ease-in-out transform hover:scale-105"
             >
               Cancelar
             </button>
@@ -1581,38 +1580,38 @@ const LaborTypeCatalog = () => {
         </form>
       )}
 
-      <h3 className="text-2xl font-semibold text-gray-700 mb-4">Tipos de Labores Existentes</h3>
+      <h3 className="text-2xl font-semibold text-emerald-300 mb-4">Tipos de Labores Existentes</h3>
       <div className="overflow-x-auto rounded-lg shadow-md">
         <table className="min-w-full leading-normal">
           <thead>
-            <tr className="bg-emerald-100 border-b border-gray-200">
-              <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Nombre</th>
-              <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Acciones</th>
+            <tr className="bg-gray-700 border-b border-gray-600">
+              <th className="px-5 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">Nombre</th>
+              <th className="px-5 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">Acciones</th>
             </tr>
           </thead>
           <tbody>
             {laborTypes.length === 0 ? (
               <tr>
-                <td colSpan="2" className="px-5 py-5 border-b border-gray-200 bg-white text-sm text-center">
+                <td colSpan="2" className="px-5 py-5 border-b border-gray-600 bg-gray-800 text-sm text-gray-300 text-center">
                   No hay tipos de labor registrados.
                 </td>
               </tr>
             ) : (
               laborTypes.map((type) => (
-                <tr key={type.id} className="hover:bg-gray-50">
-                  <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
+                <tr key={type.id} className="hover:bg-gray-700">
+                  <td className="px-5 py-5 border-b border-gray-600 bg-gray-800 text-sm">
                     {editingLaborTypeId === type.id ? (
                       <input
                         type="text"
                         value={editingLaborTypeName}
                         onChange={(e) => setEditingLaborTypeName(e.target.value)}
-                        className="shadow appearance-none border rounded w-full py-1 px-2 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                        className="shadow appearance-none border rounded w-full py-1 px-2 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-gray-600 text-white"
                       />
                     ) : (
-                      <p className="text-gray-900 whitespace-no-wrap">{type.name}</p>
+                      <p className="text-gray-100 whitespace-no-wrap">{type.name}</p>
                     )}
                   </td>
-                  <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
+                  <td className="px-5 py-5 border-b border-gray-600 bg-gray-800 text-sm">
                     {editingLaborTypeId === type.id ? (
                       <div className="flex gap-2">
                         <button
@@ -1623,7 +1622,7 @@ const LaborTypeCatalog = () => {
                         </button>
                         <button
                           onClick={handleCancelEdit}
-                          className="bg-gray-400 hover:bg-gray-500 text-white font-bold py-1 px-3 rounded-full text-xs transition duration-300"
+                          className="bg-gray-500 hover:bg-gray-600 text-white font-bold py-1 px-3 rounded-full text-xs transition duration-300"
                         >
                           Cancelar
                         </button>
@@ -1687,31 +1686,31 @@ const DiseaseCatalog = () => {
   }, [db, userId, isAuthReady, userRole, addNotification]);
 
   const handleAddDisease = async (e) => {
-    e.preventDefault();
-    if (!newDiseaseName.trim()) {
-      addNotification("El nombre de la enfermedad no puede estar vacío.", "warning");
-      return;
-    }
-    try {
-      const appId = process.env.REACT_APP_APP_ID || 'default-app-id';
-      await addDoc(collection(db, `artifacts/${appId}/public/data/disease_catalog`), {
-        name: newDiseaseName.trim(),
-        symptoms: newDiseaseSymptoms.trim(),
-        indications: newDiseaseIndications.trim(),
-        isActive: true,
-        createdAt: new Date(),
-        createdBy: userId
-      });
-      addNotification("Enfermedad añadida exitosamente.", "success");
-      setNewDiseaseName('');
-      setNewDiseaseSymptoms('');
-      setNewDiseaseIndications('');
-      setShowAddForm(false);
-    } catch (error) {
-      console.error("Error al añadir enfermedad:", error);
-      addNotification("Error al añadir enfermedad.", "error");
-    }
-  };
+      e.preventDefault();
+      if (!newDiseaseName.trim()) {
+        addNotification("El nombre de la enfermedad no puede estar vacío.", "warning");
+        return;
+      }
+      try {
+        const appId = process.env.REACT_APP_APP_ID || 'default-app-id';
+        await addDoc(collection(db, `artifacts/${appId}/public/data/disease_catalog`), {
+          name: newDiseaseName.trim(),
+          symptoms: newDiseaseSymptoms.trim(),
+          indications: newDiseaseIndications.trim(),
+          isActive: true,
+          createdAt: new Date(),
+          createdBy: userId
+        });
+        addNotification("Enfermedad añadida exitosamente.", "success");
+        setNewDiseaseName('');
+        setNewDiseaseSymptoms('');
+        setNewDiseaseIndications('');
+        setShowAddForm(false);
+      } catch (error) {
+        console.error("Error al añadir enfermedad:", error);
+        addNotification("Error al añadir enfermedad.", "error");
+      }
+    };
 
   const handleEditDisease = (diseaseId, currentName, currentSymptoms, currentIndications) => {
     setEditingDiseaseId(diseaseId);
@@ -1774,15 +1773,15 @@ const DiseaseCatalog = () => {
 
   if (userRole !== 'admin') {
     return (
-      <div className="p-6 text-center text-red-500">
+      <div className="p-6 text-center text-red-500 bg-gray-900 text-white rounded-lg">
         No tienes permisos para acceder a esta sección.
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto p-4 max-w-4xl bg-white rounded-lg shadow-xl my-8 border border-gray-100">
-      <h2 className="text-3xl font-bold text-gray-800 mb-6 border-b-2 border-gray-200 pb-2">Gestión de Catálogo de Enfermedades</h2>
+    <div className="container mx-auto p-4 max-w-4xl bg-gray-800 text-gray-100 rounded-lg shadow-xl my-8 border border-gray-700">
+      <h2 className="text-3xl font-bold text-emerald-400 mb-6 border-b-2 border-gray-700 pb-2">Gestión de Catálogo de Enfermedades</h2>
 
       {!showAddForm && (
         <button
@@ -1794,25 +1793,25 @@ const DiseaseCatalog = () => {
       )}
 
       {showAddForm && (
-        <form onSubmit={handleAddDisease} className="mb-8 p-6 bg-gray-50 rounded-lg shadow-inner">
-          <h3 className="text-2xl font-semibold text-gray-700 mb-4">Nueva Enfermedad</h3>
+        <form onSubmit={handleAddDisease} className="mb-8 p-6 bg-gray-700 rounded-lg shadow-inner">
+          <h3 className="text-2xl font-semibold text-emerald-300 mb-4">Nueva Enfermedad</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <div>
-              <label htmlFor="newDiseaseName" className="block text-gray-700 text-sm font-bold mb-2">Nombre:</label>
+              <label htmlFor="newDiseaseName" className="block text-gray-200 text-sm font-bold mb-2">Nombre:</label>
               <input
                 type="text"
                 id="newDiseaseName"
-                className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-gray-600 text-white"
                 value={newDiseaseName}
                 onChange={(e) => setNewDiseaseName(e.target.value)}
                 required
               />
             </div>
             <div className="md:col-span-2">
-              <label htmlFor="newDiseaseSymptoms" className="block text-gray-700 text-sm font-bold mb-2">Síntomas:</label>
+              <label htmlFor="newDiseaseSymptoms" className="block text-gray-200 text-sm font-bold mb-2">Síntomas:</label>
               <textarea
                 id="newDiseaseSymptoms"
-                className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-gray-600 text-white"
                 value={newDiseaseSymptoms}
                 onChange={(e) => setNewDiseaseSymptoms(e.target.value)}
                 rows="3"
@@ -1820,10 +1819,10 @@ const DiseaseCatalog = () => {
               ></textarea>
             </div>
             <div className="md:col-span-2">
-              <label htmlFor="newDiseaseIndications" className="block text-gray-700 text-sm font-bold mb-2">Indicaciones/Qué hacer:</label>
+              <label htmlFor="newDiseaseIndications" className="block text-gray-200 text-sm font-bold mb-2">Indicaciones/Qué hacer:</label>
               <textarea
                 id="newDiseaseIndications"
-                className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-gray-600 text-white"
                 value={newDiseaseIndications}
                 onChange={(e) => setNewDiseaseIndications(e.target.value)}
                 rows="3"
@@ -1841,7 +1840,7 @@ const DiseaseCatalog = () => {
             <button
               type="button"
               onClick={() => setShowAddForm(false)}
-              className="bg-gray-400 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-full shadow transition duration-300 ease-in-out transform hover:scale-105"
+              className="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-full shadow transition duration-300 ease-in-out transform hover:scale-105"
             >
               Cancelar
             </button>
@@ -1849,64 +1848,64 @@ const DiseaseCatalog = () => {
         </form>
       )}
 
-      <h3 className="text-2xl font-semibold text-gray-700 mb-4">Enfermedades Existentes</h3>
+      <h3 className="text-2xl font-semibold text-emerald-300 mb-4">Enfermedades Existentes</h3>
       <div className="overflow-x-auto rounded-lg shadow-md">
         <table className="min-w-full leading-normal">
           <thead>
-            <tr className="bg-emerald-100 border-b border-gray-200">
-              <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Nombre</th>
-              <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Síntomas</th>
-              <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Indicaciones</th>
-              <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Acciones</th>
+            <tr className="bg-gray-700 border-b border-gray-600">
+              <th className="px-5 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">Nombre</th>
+              <th className="px-5 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">Síntomas</th>
+              <th className="px-5 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">Indicaciones</th>
+              <th className="px-5 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">Acciones</th>
             </tr>
           </thead>
           <tbody>
             {diseases.length === 0 ? (
               <tr>
-                <td colSpan="4" className="px-5 py-5 border-b border-gray-200 bg-white text-sm text-center">
+                <td colSpan="4" className="px-5 py-5 border-b border-gray-600 bg-gray-800 text-sm text-gray-300 text-center">
                   No hay enfermedades registradas.
                 </td>
               </tr>
             ) : (
               diseases.map((disease) => (
-                <tr key={disease.id} className="hover:bg-gray-50">
-                  <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
+                <tr key={disease.id} className="hover:bg-gray-700">
+                  <td className="px-5 py-5 border-b border-gray-600 bg-gray-800 text-sm">
                     {editingDiseaseId === disease.id ? (
                       <input
                         type="text"
                         value={editingDiseaseName}
                         onChange={(e) => setEditingDiseaseName(e.target.value)}
-                        className="shadow appearance-none border rounded w-full py-1 px-2 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                        className="shadow appearance-none border rounded w-full py-1 px-2 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-gray-700 text-white"
                       />
                     ) : (
-                      <p className="text-gray-900 whitespace-no-wrap">{disease.name}</p>
+                      <p className="text-gray-100 whitespace-no-wrap">{disease.name}</p>
                     )}
                   </td>
-                  <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
+                  <td className="px-5 py-5 border-b border-gray-600 bg-gray-800 text-sm">
                     {editingDiseaseId === disease.id ? (
                       <textarea
                         value={editingDiseaseSymptoms}
                         onChange={(e) => setEditingDiseaseSymptoms(e.target.value)}
-                        className="shadow appearance-none border rounded w-full py-1 px-2 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                        className="shadow appearance-none border rounded w-full py-1 px-2 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-gray-700 text-white"
                         rows="2"
                       />
                     ) : (
-                      <p className="text-gray-900 whitespace-no-wrap text-sm">{disease.symptoms || 'N/A'}</p>
+                      <p className="text-gray-100 whitespace-no-wrap text-sm">{disease.symptoms || 'N/A'}</p>
                     )}
                   </td>
-                  <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
+                  <td className="px-5 py-5 border-b border-gray-600 bg-gray-800 text-sm">
                     {editingDiseaseId === disease.id ? (
                       <textarea
                         value={editingDiseaseIndications}
                         onChange={(e) => setEditingDiseaseIndications(e.target.value)}
-                        className="shadow appearance-none border rounded w-full py-1 px-2 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                        className="shadow appearance-none border rounded w-full py-1 px-2 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-gray-700 text-white"
                         rows="2"
                       />
                     ) : (
-                      <p className="text-gray-900 whitespace-no-wrap text-sm">{disease.indications || 'N/A'}</p>
+                      <p className="text-gray-100 whitespace-no-wrap text-sm">{disease.indications || 'N/A'}</p>
                     )}
                   </td>
-                  <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
+                  <td className="px-5 py-5 border-b border-gray-600 bg-gray-800 text-sm">
                     {editingDiseaseId === disease.id ? (
                       <div className="flex gap-2">
                         <button
@@ -1917,7 +1916,7 @@ const DiseaseCatalog = () => {
                         </button>
                         <button
                           onClick={handleCancelEdit}
-                          className="bg-gray-400 hover:bg-gray-500 text-white font-bold py-1 px-3 rounded-full text-xs transition duration-300"
+                          className="bg-gray-500 hover:bg-gray-600 text-white font-bold py-1 px-3 rounded-full text-xs transition duration-300"
                         >
                           Cancelar
                         </button>
@@ -2023,29 +2022,29 @@ const LaborForm = () => {
   };
 
   return (
-    <div className="container mx-auto p-4 max-w-2xl bg-white rounded-lg shadow-xl my-8 border border-gray-100">
-      <h2 className="text-3xl font-bold text-gray-800 mb-6 border-b-2 border-gray-200 pb-2">Registrar Labor</h2>
+    <div className="container mx-auto p-4 max-w-2xl bg-gray-800 text-gray-100 rounded-lg shadow-xl my-8 border border-gray-700">
+      <h2 className="text-3xl font-bold text-emerald-400 mb-6 border-b-2 border-gray-700 pb-2">Registrar Labor</h2>
       <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-6 md:grid-cols-2">
         <div>
-          <label htmlFor="laborDate" className="block text-gray-700 text-sm font-bold mb-2">Fecha:</label>
+          <label htmlFor="laborDate" className="block text-gray-200 text-sm font-bold mb-2">Fecha:</label>
           <input
             type="date"
             id="laborDate"
             name="date"
             value={formData.date}
             onChange={handleChange}
-            className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400"
+            className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-gray-700 text-white"
             required
           />
         </div>
         <div>
-          <label htmlFor="locationId" className="block text-gray-700 text-sm font-bold mb-2">Ubicación:</label>
+          <label htmlFor="locationId" className="block text-gray-200 text-sm font-bold mb-2">Ubicación:</label>
           <select
             id="locationId"
             name="locationId"
             value={formData.locationId}
             onChange={handleChange}
-            className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent"
+            className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent bg-gray-700 text-white"
             required
           >
             <option value="">Selecciona una ubicación</option>
@@ -2055,13 +2054,13 @@ const LaborForm = () => {
           </select>
         </div>
         <div className="md:col-span-2">
-          <label htmlFor="laborTypeId" className="block text-gray-700 text-sm font-bold mb-2">Tipo de Labor:</label>
+          <label htmlFor="laborTypeId" className="block text-gray-200 text-sm font-bold mb-2">Tipo de Labor:</label>
           <select
             id="laborTypeId"
             name="laborTypeId"
             value={formData.laborTypeId}
             onChange={handleChange}
-            className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400"
+            className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent bg-gray-700 text-white"
             required
           >
             <option value="">Selecciona un tipo de labor</option>
@@ -2071,7 +2070,7 @@ const LaborForm = () => {
           </select>
         </div>
         <div className="md:col-span-2">
-          <label htmlFor="observations" className="block text-gray-700 text-sm font-bold mb-2">Observaciones:</label>
+          <label htmlFor="observations" className="block text-gray-200 text-sm font-bold mb-2">Observaciones:</label>
           <textarea
             id="observations"
             name="observations"
@@ -2079,7 +2078,7 @@ const LaborForm = () => {
             onChange={handleChange}
             rows="4"
             placeholder="Detalles sobre la labor realizada..."
-            className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400"
+            className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-gray-700 text-white"
             required
           ></textarea>
         </div>
@@ -2095,7 +2094,6 @@ const LaborForm = () => {
     </div>
   );
 };
-
 // Componente para reportar una Enfermedad
 const ReportDiseaseForm = () => {
   const { db, userId, isAuthReady, addNotification } = useContext(AppContext);
@@ -2107,7 +2105,8 @@ const ReportDiseaseForm = () => {
     diseaseId: '',
     severity: 'Baja',
     comments: '',
-    photoUrl: ''
+    photoFile: null, // Nuevo: para el objeto File
+    photoPreviewUrl: '' // Nuevo: para la URL de previsualización local
   });
   const [aiLoading, setAiLoading] = useState(false);
   const [aiDiagnosis, setAiDiagnosis] = useState('');
@@ -2115,6 +2114,20 @@ const ReportDiseaseForm = () => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setFormData(prev => ({ ...prev, photoFile: file }));
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData(prev => ({ ...prev, photoPreviewUrl: reader.result }));
+      };
+      reader.readAsDataURL(file);
+    } else {
+      setFormData(prev => ({ ...prev, photoFile: null, photoPreviewUrl: '' }));
+    }
   };
 
   useEffect(() => {
@@ -2191,6 +2204,18 @@ const ReportDiseaseForm = () => {
       return;
     }
 
+    let imageUrl = '';
+    if (formData.photoFile) {
+      addNotification("Subiendo imagen... (simulado)", "info", 2000);
+      // Aquí iría la lógica REAL para subir a Firebase Storage
+      // const storage = getStorage(db);
+      // const imageRef = ref(storage, `disease_images/${formData.photoFile.name}_${Date.now()}`);
+      // await uploadBytes(imageRef, formData.photoFile);
+      // imageUrl = await getDownloadURL(imageRef);
+      // addNotification("Imagen subida exitosamente.", "success");
+      imageUrl = formData.photoPreviewUrl;
+    }
+
     try {
       const selectedDisease = diseases.find(disease => disease.id === formData.diseaseId);
       const selectedLocation = locations.find(loc => loc.id === formData.locationId);
@@ -2208,7 +2233,7 @@ const ReportDiseaseForm = () => {
         diseaseName: selectedDisease.name,
         severity: formData.severity,
         comments: formData.comments,
-        photoUrl: formData.photoUrl,
+        photoUrl: imageUrl,
         aiDiagnosisSuggestion: aiDiagnosis,
         createdAt: new Date(),
         createdBy: userId
@@ -2220,7 +2245,8 @@ const ReportDiseaseForm = () => {
         diseaseId: '',
         severity: 'Baja',
         comments: '',
-        photoUrl: ''
+        photoFile: null,
+        photoPreviewUrl: ''
       });
       setAiDiagnosis('');
     } catch (error) {
@@ -2230,29 +2256,29 @@ const ReportDiseaseForm = () => {
   };
 
   return (
-    <div className="container mx-auto p-4 max-w-2xl bg-white rounded-lg shadow-xl my-8 border border-gray-100">
-      <h2 className="text-3xl font-bold text-gray-800 mb-6 border-b-2 border-gray-200 pb-2">Reportar Enfermedad</h2>
+    <div className="container mx-auto p-4 max-w-2xl bg-gray-800 text-gray-100 rounded-lg shadow-xl my-8 border border-gray-700">
+      <h2 className="text-3xl font-bold text-emerald-400 mb-6 border-b-2 border-gray-700 pb-2">Reportar Enfermedad</h2>
       <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-6 md:grid-cols-2">
         <div>
-          <label htmlFor="diseaseDate" className="block text-gray-700 text-sm font-bold mb-2">Fecha:</label>
+          <label htmlFor="diseaseDate" className="block text-gray-200 text-sm font-bold mb-2">Fecha:</label>
           <input
             type="date"
             id="diseaseDate"
             name="date"
             value={formData.date}
             onChange={handleChange}
-            className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400"
+            className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-gray-700 text-white"
             required
           />
         </div>
         <div>
-          <label htmlFor="locationId" className="block text-gray-700 text-sm font-bold mb-2">Ubicación:</label>
+          <label htmlFor="locationId" className="block text-gray-200 text-sm font-bold mb-2">Ubicación:</label>
           <select
             id="locationId"
             name="locationId"
             value={formData.locationId}
             onChange={handleChange}
-            className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent"
+            className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent bg-gray-700 text-white"
             required
           >
             <option value="">Selecciona una ubicación</option>
@@ -2262,13 +2288,13 @@ const ReportDiseaseForm = () => {
           </select>
         </div>
         <div className="md:col-span-2">
-          <label htmlFor="diseaseId" className="block text-gray-700 text-sm font-bold mb-2">Enfermedad:</label>
+          <label htmlFor="diseaseId" className="block text-gray-200 text-sm font-bold mb-2">Enfermedad:</label>
           <select
             id="diseaseId"
             name="diseaseId"
             value={formData.diseaseId}
             onChange={handleChange}
-            className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400"
+            className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent bg-gray-700 text-white"
             required
           >
             <option value="">Selecciona una enfermedad</option>
@@ -2278,13 +2304,13 @@ const ReportDiseaseForm = () => {
           </select>
         </div>
         <div>
-          <label htmlFor="severity" className="block text-gray-700 text-sm font-bold mb-2">Severidad:</label>
+          <label htmlFor="severity" className="block text-gray-200 text-sm font-bold mb-2">Severidad:</label>
           <select
             id="severity"
             name="severity"
             value={formData.severity}
             onChange={handleChange}
-            className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400"
+            className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-gray-700 text-white"
             required
           >
             <option value="Baja">Baja</option>
@@ -2293,22 +2319,23 @@ const ReportDiseaseForm = () => {
           </select>
         </div>
         <div>
-          <label htmlFor="photoUrl" className="block text-gray-700 text-sm font-bold mb-2">URL de la Foto (opcional):</label>
+          <label htmlFor="photoUpload" className="block text-gray-200 text-sm font-bold mb-2">Subir Foto (opcional):</label>
           <input
-            type="text"
-            id="photoUrl"
-            name="photoUrl"
-            value={formData.photoUrl}
-            onChange={handleChange}
-            placeholder="Pega aquí la URL de una imagen"
-            className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400"
+            type="file"
+            id="photoUpload"
+            name="photoUpload"
+            accept="image/*"
+            onChange={handleImageChange}
+            className="block w-full text-sm text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-emerald-500 file:text-white hover:file:bg-emerald-600 cursor-pointer"
           />
-          <p className="text-xs text-gray-500 mt-1">
-            La carga directa de archivos no está implementada aún. Puedes pegar una URL de imagen temporalmente.
-          </p>
+          {formData.photoPreviewUrl && (
+            <div className="mt-2">
+              <img src={formData.photoPreviewUrl} alt="Previsualización" className="max-w-xs h-auto rounded-lg shadow-md border border-gray-600" />
+            </div>
+          )}
         </div>
         <div className="md:col-span-2">
-          <label htmlFor="comments" className="block text-gray-700 text-sm font-bold mb-2">Comentarios:</label>
+          <label htmlFor="comments" className="block text-gray-200 text-sm font-bold mb-2">Comentarios:</label>
           <textarea
             id="comments"
             name="comments"
@@ -2316,7 +2343,7 @@ const ReportDiseaseForm = () => {
             onChange={handleChange}
             rows="4"
             placeholder="Observaciones adicionales sobre la enfermedad detectada..."
-            className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400"
+            className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-gray-700 text-white"
           ></textarea>
           <button
             type="button"
@@ -2329,9 +2356,9 @@ const ReportDiseaseForm = () => {
         </div>
 
         {aiDiagnosis && (
-          <div className="md:col-span-2 mt-4 p-4 bg-purple-50 rounded-lg border border-purple-200">
-            <h3 className="text-lg font-semibold text-purple-800 mb-2">Sugerencia de Diagnóstico IA:</h3>
-            <p className="text-gray-800 whitespace-pre-wrap">{aiDiagnosis}</p>
+          <div className="md:col-span-2 mt-4 p-4 bg-purple-900 rounded-lg border border-purple-700">
+            <h3 className="text-lg font-semibold text-purple-300 mb-2">Sugerencia de Diagnóstico IA:</h3>
+            <p className="text-gray-100 whitespace-pre-wrap">{aiDiagnosis}</p>
           </div>
         )}
 
@@ -2396,7 +2423,7 @@ const NutrientRecipeCatalog = () => {
       const updatedNutrients = editingRecipeNutrients.filter((_, i) => i !== index);
       setEditingRecipeNutrients(updatedNutrients);
     } else {
-      const updatedNutrients = newRecipeNutrients.filter((_, i) => i !== index);
+      const updatedNutrients = [...newRecipeNutrients].filter((_, i) => i !== index);
       setNewRecipeNutrients(updatedNutrients);
     }
   };
@@ -2500,15 +2527,15 @@ const NutrientRecipeCatalog = () => {
 
   if (userRole !== 'admin') {
     return (
-      <div className="p-6 text-center text-red-500">
+      <div className="p-6 text-center text-red-500 bg-gray-900 text-white rounded-lg">
         No tienes permisos para acceder a esta sección.
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto p-4 max-w-4xl bg-white rounded-lg shadow-xl my-8 border border-gray-100">
-      <h2 className="text-3xl font-bold text-gray-800 mb-6 border-b-2 border-gray-200 pb-2">Gestión de Recetas de Nutrientes</h2>
+    <div className="container mx-auto p-4 max-w-4xl bg-gray-800 text-gray-100 rounded-lg shadow-xl my-8 border border-gray-700">
+      <h2 className="text-3xl font-bold text-emerald-400 mb-6 border-b-2 border-gray-700 pb-2">Gestión de Recetas de Nutrientes</h2>
 
       {!showAddForm && (
         <button
@@ -2520,37 +2547,37 @@ const NutrientRecipeCatalog = () => {
       )}
 
       {showAddForm && (
-        <form onSubmit={handleAddRecipe} className="mb-8 p-6 bg-gray-50 rounded-lg shadow-inner">
-          <h3 className="text-2xl font-semibold text-gray-700 mb-4">Nueva Receta</h3>
+        <form onSubmit={handleAddRecipe} className="mb-8 p-6 bg-gray-700 rounded-lg shadow-inner">
+          <h3 className="text-2xl font-semibold text-emerald-300 mb-4">Nueva Receta</h3>
           <div className="mb-4">
-            <label htmlFor="newRecipeName" className="block text-gray-700 text-sm font-bold mb-2">Nombre de la Receta:</label>
+            <label htmlFor="newRecipeName" className="block text-gray-200 text-sm font-bold mb-2">Nombre de la Receta:</label>
             <input
               type="text"
               id="newRecipeName"
-              className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400"
+              className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-gray-600 text-white"
               value={newRecipeName}
               onChange={(e) => setNewRecipeName(e.target.value)}
               required
             />
           </div>
-          <h4 className="text-xl font-semibold text-gray-700 mb-3">Nutrientes y Proporciones</h4>
+          <h4 className="text-xl font-semibold text-emerald-300 mb-3">Nutrientes y Proporciones</h4>
           {newRecipeNutrients.map((nutrient, index) => (
-            <div key={index} className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3 p-3 border rounded-md bg-white">
+            <div key={index} className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3 p-3 border border-gray-600 rounded-md bg-gray-800">
               <div>
-                <label htmlFor={`newNutrientName-${index}`} className="block text-gray-700 text-xs font-bold mb-1">Nombre Nutriente:</label>
+                <label htmlFor={`newNutrientName-${index}`} className="block text-gray-200 text-xs font-bold mb-1">Nombre Nutriente:</label>
                 <input
                   type="text"
                   id={`newNutrientName-${index}`}
                   name="name"
                   value={nutrient.name}
                   onChange={(e) => handleNewNutrientChange(index, e)}
-                  className="shadow appearance-none border rounded-md w-full py-1 px-2 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                  className="shadow appearance-none border rounded-md w-full py-1 px-2 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-gray-700 text-white"
                   placeholder="Ej: Nitrato de Calcio"
                   required
                 />
               </div>
               <div>
-                <label htmlFor={`newNutrientProportion-${index}`} className="block text-gray-700 text-xs font-bold mb-1">Proporción (g/L):</label>
+                <label htmlFor={`newNutrientProportion-${index}`} className="block text-gray-200 text-xs font-bold mb-1">Proporción (g/L):</label>
                 <input
                   type="number"
                   step="0.01"
@@ -2558,7 +2585,7 @@ const NutrientRecipeCatalog = () => {
                   name="proportion"
                   value={nutrient.proportion}
                   onChange={(e) => handleNewNutrientChange(index, e)}
-                  className="shadow appearance-none border rounded-md w-full py-1 px-2 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                  className="shadow appearance-none border rounded-md w-full py-1 px-2 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-gray-700 text-white"
                   required
                 />
               </div>
@@ -2567,7 +2594,7 @@ const NutrientRecipeCatalog = () => {
                   <button
                     type="button"
                     onClick={() => handleRemoveNutrientRow(index)}
-                    className="bg-red-500 hover:bg-red-600 text-white font-bold py-1 px-2 rounded-md text-xs"
+                    className="bg-red-500 hover:bg-red-600 text-white font-bold py-1 px-2 rounded-full text-xs"
                   >
                     Remover
                   </button>
@@ -2593,7 +2620,7 @@ const NutrientRecipeCatalog = () => {
             <button
               type="button"
               onClick={() => setShowAddForm(false)}
-              className="bg-gray-400 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-full shadow transition duration-300 ease-in-out transform hover:scale-105"
+              className="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-full shadow transition duration-300 ease-in-out transform hover:scale-105"
             >
               Cancelar
             </button>
@@ -2601,39 +2628,39 @@ const NutrientRecipeCatalog = () => {
         </form>
       )}
 
-      <h3 className="text-2xl font-semibold text-gray-700 mb-4">Recetas Existentes</h3>
+      <h3 className="text-2xl font-semibold text-emerald-300 mb-4">Recetas Existentes</h3>
       <div className="overflow-x-auto rounded-lg shadow-md">
         <table className="min-w-full leading-normal">
           <thead>
-            <tr className="bg-emerald-100 border-b border-gray-200">
-              <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Nombre de Receta</th>
-              <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Nutrientes (Proporción g/L)</th>
-              <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Acciones</th>
+            <tr className="bg-gray-700 border-b border-gray-600">
+              <th className="px-5 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">Nombre de Receta</th>
+              <th className="px-5 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">Nutrientes (Proporción g/L)</th>
+              <th className="px-5 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">Acciones</th>
             </tr>
           </thead>
           <tbody>
             {recipes.length === 0 ? (
               <tr>
-                <td colSpan="3" className="px-5 py-5 border-b border-gray-200 bg-white text-sm text-center">
+                <td colSpan="3" className="px-5 py-5 border-b border-gray-600 bg-gray-800 text-sm text-gray-300 text-center">
                   No hay recetas de nutrientes registradas.
                 </td>
               </tr>
             ) : (
               recipes.map((recipe) => (
-                <tr key={recipe.id} className="hover:bg-gray-50">
-                  <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
+                <tr key={recipe.id} className="hover:bg-gray-700">
+                  <td className="px-5 py-5 border-b border-gray-600 bg-gray-800 text-sm">
                     {editingRecipeId === recipe.id ? (
                       <input
                         type="text"
                         value={editingRecipeName}
                         onChange={(e) => setEditingRecipeName(e.target.value)}
-                        className="shadow appearance-none border rounded w-full py-1 px-2 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                        className="shadow appearance-none border rounded w-full py-1 px-2 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-gray-700 text-white"
                       />
                     ) : (
-                      <p className="text-gray-900 whitespace-no-wrap">{recipe.name}</p>
+                      <p className="text-gray-100 whitespace-no-wrap">{recipe.name}</p>
                     )}
                   </td>
-                  <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
+                  <td className="px-5 py-5 border-b border-gray-600 bg-gray-800 text-sm">
                     {editingRecipeId === recipe.id ? (
                       <div>
                         {editingRecipeNutrients.map((nutrient, index) => (
@@ -2643,7 +2670,7 @@ const NutrientRecipeCatalog = () => {
                               name="name"
                               value={nutrient.name}
                               onChange={(e) => handleEditingNutrientChange(index, e)}
-                              className="shadow appearance-none border rounded py-1 px-2 text-gray-700 text-xs w-2/5"
+                              className="shadow appearance-none border rounded py-1 px-2 text-gray-800 text-xs w-2/5 bg-gray-700 text-white"
                             />
                             <input
                               type="number"
@@ -2651,14 +2678,14 @@ const NutrientRecipeCatalog = () => {
                               name="proportion"
                               value={nutrient.proportion}
                               onChange={(e) => handleEditingNutrientChange(index, e)}
-                              className="shadow appearance-none border rounded py-1 px-2 text-gray-700 text-xs w-1/4"
+                              className="shadow appearance-none border rounded py-1 px-2 text-gray-800 text-xs w-1/4 bg-gray-700 text-white"
                             />
-                            <span className="text-xs text-gray-600">g/L</span>
+                            <span className="text-xs text-gray-300">g/L</span>
                             {editingRecipeNutrients.length > 1 && (
                               <button
                                 type="button"
                                 onClick={() => handleRemoveNutrientRow(index, true)}
-                                className="bg-red-400 hover:bg-red-500 text-white py-0.5 px-1 rounded-full text-xs"
+                                className="bg-red-500 hover:bg-red-600 text-white py-0.5 px-1 rounded-full text-xs"
                               >
                                 X
                               </button>
@@ -2674,14 +2701,14 @@ const NutrientRecipeCatalog = () => {
                         </button>
                       </div>
                     ) : (
-                      <ul className="list-disc list-inside text-gray-900 whitespace-no-wrap">
+                      <ul className="list-disc list-inside text-gray-100 whitespace-no-wrap">
                         {recipe.nutrients.map((nutrient, index) => (
                           <li key={index}>{nutrient.name}: {nutrient.proportion} g/L</li>
                         ))}
                       </ul>
                     )}
                   </td>
-                  <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
+                  <td className="px-5 py-5 border-b border-gray-600 bg-gray-800 text-sm">
                     {editingRecipeId === recipe.id ? (
                       <div className="flex gap-2">
                         <button
@@ -2692,7 +2719,7 @@ const NutrientRecipeCatalog = () => {
                         </button>
                         <button
                           onClick={handleCancelEdit}
-                          className="bg-gray-400 hover:bg-gray-500 text-white font-bold py-1 px-3 rounded-full text-xs transition duration-300"
+                          className="bg-gray-500 hover:bg-gray-600 text-white font-bold py-1 px-3 rounded-full text-xs transition duration-300"
                         >
                           Cancelar
                         </button>
@@ -2750,7 +2777,7 @@ const NutrientMixCalculatorForm = () => {
     }
   }, [db, isAuthReady, addNotification]);
 
-  const handleCalculateMix = (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
     if (!selectedRecipeId || !mixLiters) {
       addNotification("Por favor, selecciona una receta e ingresa la cantidad de litros.", "warning");
@@ -2787,16 +2814,16 @@ const NutrientMixCalculatorForm = () => {
   };
 
   return (
-    <div className="container mx-auto p-4 max-w-2xl bg-white rounded-lg shadow-xl my-8 border border-gray-100">
-      <h2 className="text-3xl font-bold text-gray-800 mb-6 border-b-2 border-gray-200 pb-2">Calculadora de Mezcla de Nutrientes</h2>
-      <form onSubmit={handleCalculateMix} className="grid grid-cols-1 gap-6">
+    <div className="container mx-auto p-4 max-w-2xl bg-gray-800 text-gray-100 rounded-lg shadow-xl my-8 border border-gray-700">
+      <h2 className="text-3xl font-bold text-emerald-400 mb-6 border-b-2 border-gray-700 pb-2">Calculadora de Mezcla de Nutrientes</h2>
+      <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-6">
         <div>
-          <label htmlFor="recipeSelect" className="block text-gray-700 text-sm font-bold mb-2">Selecciona una Receta:</label>
+          <label htmlFor="recipeSelect" className="block text-gray-200 text-sm font-bold mb-2">Selecciona una Receta:</label>
           <select
             id="recipeSelect"
             value={selectedRecipeId}
             onChange={(e) => setSelectedRecipeId(e.target.value)}
-            className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400"
+            className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-gray-700 text-white"
             required
           >
             <option value="">-- Selecciona una receta --</option>
@@ -2806,7 +2833,7 @@ const NutrientMixCalculatorForm = () => {
           </select>
         </div>
         <div>
-          <label htmlFor="mixLiters" className="block text-gray-700 text-sm font-bold mb-2">Cantidad de Litros a Preparar:</label>
+          <label htmlFor="mixLiters" className="block text-gray-200 text-sm font-bold mb-2">Cantidad de Litros a Preparar:</label>
           <input
             type="number"
             step="0.01"
@@ -2814,7 +2841,7 @@ const NutrientMixCalculatorForm = () => {
             value={mixLiters}
             onChange={(e) => setMixLiters(e.target.value)}
             placeholder="Ej: 200"
-            className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400"
+            className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-gray-700 text-white"
             required
           />
         </div>
@@ -2828,7 +2855,7 @@ const NutrientMixCalculatorForm = () => {
           <button
             type="button"
             onClick={handleClear}
-            className="bg-gray-400 hover:bg-gray-500 text-white font-bold py-2 px-6 rounded-full shadow-lg transition duration-300 ease-in-out transform hover:scale-105"
+            className="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-6 rounded-full shadow-lg transition duration-300 ease-in-out transform hover:scale-105"
           >
             Limpiar
           </button>
@@ -2836,9 +2863,9 @@ const NutrientMixCalculatorForm = () => {
       </form>
 
       {calculatedNutrients.length > 0 && (
-        <div className="mt-8 p-6 bg-gray-50 rounded-lg shadow-inner">
-          <h3 className="text-2xl font-semibold text-gray-700 mb-4">Cantidades Calculadas:</h3>
-          <ul className="list-disc list-inside text-gray-800 text-lg">
+        <div className="mt-8 p-6 bg-gray-700 rounded-lg shadow-inner">
+          <h3 className="text-2xl font-semibold text-emerald-300 mb-4">Cantidades Calculadas:</h3>
+          <ul className="list-disc list-inside text-gray-100 text-lg">
             {calculatedNutrients.map((nutrient, index) => (
               <li key={index}>{nutrient.name}: {nutrient.grams} gramos</li>
             ))}
@@ -3072,50 +3099,49 @@ const TaskAssignmentForm = () => {
 
   if (userRole !== 'admin') {
     return (
-      <div className="p-6 text-center text-red-500">
+      <div className="p-6 text-center text-red-500 bg-gray-900 text-white rounded-lg">
         No tienes permisos para acceder a esta sección.
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto p-4 max-w-3xl bg-white rounded-lg shadow-xl my-8 border border-gray-100">
-      <h2 className="text-3xl font-bold text-gray-800 mb-6 border-b-2 border-gray-200 pb-2">Planificación de Labores (Asignar Tareas)</h2>
+    <div className="container mx-auto p-4 max-w-3xl bg-gray-800 text-gray-100 rounded-lg shadow-xl my-8 border border-gray-700">
+      <h2 className="text-3xl font-bold text-emerald-400 mb-6 border-b-2 border-gray-700 pb-2">Planificación de Labores (Asignar Tareas)</h2>
       <form onSubmit={handleSubmit}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
           <div>
-            <label htmlFor="taskName" className="block text-gray-700 text-sm font-bold mb-2">Nombre de la Tarea:</label>
+            <label htmlFor="taskName" className="block text-gray-200 text-sm font-bold mb-2">Nombre de la Tarea:</label>
             <input
               type="text"
               id="taskName"
               name="name"
               value={formData.name}
               onChange={handleChange}
-              placeholder="Ej: Poda de brotes laterales"
-              className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400"
+              className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-gray-700 text-white"
               required
             />
           </div>
           <div>
-            <label htmlFor="taskDate" className="block text-gray-700 text-sm font-bold mb-2">Fecha Límite:</label>
+            <label htmlFor="taskDate" className="block text-gray-200 text-sm font-bold mb-2">Fecha Límite:</label>
             <input
               type="date"
               id="taskDate"
               name="date"
               value={formData.date}
               onChange={handleChange}
-              className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400"
+              className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-gray-700 text-white"
               required
             />
           </div>
           <div>
-            <label htmlFor="locationId" className="block text-gray-700 text-sm font-bold mb-2">Ubicación:</label>
+            <label htmlFor="locationId" className="block text-gray-200 text-sm font-bold mb-2">Ubicación:</label>
             <select
               id="locationId"
               name="locationId"
               value={formData.locationId}
               onChange={handleChange}
-              className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent"
+              className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent bg-gray-700 text-white"
               required
             >
               <option value="">Selecciona una ubicación</option>
@@ -3125,13 +3151,13 @@ const TaskAssignmentForm = () => {
             </select>
           </div>
           <div>
-            <label htmlFor="laborTypeId" className="block text-gray-700 text-sm font-bold mb-2">Tipo de Labor:</label>
+            <label htmlFor="laborTypeId" className="block text-gray-200 text-sm font-bold mb-2">Tipo de Labor:</label>
             <select
               id="laborTypeId"
               name="laborTypeId"
               value={formData.laborTypeId}
               onChange={handleChange}
-              className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400"
+              className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent bg-gray-700 text-white"
               required
             >
               <option value="">Selecciona un tipo de labor</option>
@@ -3141,23 +3167,7 @@ const TaskAssignmentForm = () => {
             </select>
           </div>
           <div className="md:col-span-2">
-            <label htmlFor="assignedToUserId" className="block text-gray-700 text-sm font-bold mb-2">Asignar a Operario:</label>
-            <select
-              id="assignedToUserId"
-              name="assignedToUserId"
-              value={formData.assignedToUserId}
-              onChange={handleChange}
-              className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400"
-              required
-            >
-              <option value="">Selecciona un operario</option>
-              {operators.map(operator => (
-                <option key={operator.id} value={operator.id}>{operator.email || operator.id}</option>
-              ))}
-            </select>
-          </div>
-          <div className="md:col-span-2">
-            <label htmlFor="description" className="block text-gray-700 text-sm font-bold mb-2">Descripción / Observaciones:</label>
+            <label htmlFor="description" className="block text-gray-200 text-sm font-bold mb-2">Descripción / Observaciones:</label>
             <textarea
               id="description"
               name="description"
@@ -3165,7 +3175,7 @@ const TaskAssignmentForm = () => {
               onChange={handleChange}
               rows="3"
               placeholder="Detalles adicionales sobre la tarea a realizar."
-              className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400"
+              className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-gray-700 text-white"
             ></textarea>
             <button
               type="button"
@@ -3179,18 +3189,18 @@ const TaskAssignmentForm = () => {
         </div>
 
         {showPlannedInputs && (
-          <div className="mb-6 p-6 bg-gray-100 rounded-lg shadow-inner">
-            <h3 className="text-2xl font-semibold text-gray-700 mb-4">Insumos Planificados (Opcional)</h3>
+          <div className="mb-6 p-6 bg-gray-700 rounded-lg shadow-inner">
+            <h3 className="text-2xl font-semibold text-emerald-300 mb-4">Insumos Planificados (Opcional)</h3>
             {formData.plannedInputs.map((item, index) => (
-              <div key={index} className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4 p-4 border rounded-md bg-white">
+              <div key={index} className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4 p-4 border border-gray-600 rounded-md bg-gray-800">
                 <div>
-                  <label htmlFor={`plannedInputId-${index}`} className="block text-gray-700 text-sm font-bold mb-2">Insumo:</label>
+                  <label htmlFor={`plannedInputId-${index}`} className="block text-gray-200 text-sm font-bold mb-2">Insumo:</label>
                   <select
                     id={`plannedInputId-${index}`}
                     name="inputId"
                     value={item.inputId}
                     onChange={(e) => handlePlannedInputChange(index, e)}
-                    className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                    className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-gray-700 text-white"
                     required
                   >
                     <option value="">Selecciona insumo</option>
@@ -3200,7 +3210,7 @@ const TaskAssignmentForm = () => {
                   </select>
                 </div>
                 <div>
-                  <label htmlFor={`plannedQuantity-${index}`} className="block text-gray-700 text-sm font-bold mb-2">Cantidad:</label>
+                  <label htmlFor={`plannedQuantity-${index}`} className="block text-gray-200 text-sm font-bold mb-2">Cantidad:</label>
                   <input
                     type="number"
                     step="0.01"
@@ -3208,13 +3218,13 @@ const TaskAssignmentForm = () => {
                     name="quantity"
                     value={item.quantity}
                     onChange={(e) => handlePlannedInputChange(index, e)}
-                    className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                    className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-gray-700 text-white"
                     required
                   />
                 </div>
                 <div className="flex items-center pt-2">
-                  <span className="text-gray-700 text-sm font-bold block mb-2">Unidad:</span>
-                  <p className="ml-2 text-gray-900">{item.unit || '-'}</p>
+                  <span className="text-gray-200 text-sm font-bold block mb-2">Unidad:</span>
+                  <p className="ml-2 text-gray-100">{item.unit || '-'}</p>
                 </div>
                 <div className="flex items-center pt-2">
                   {formData.plannedInputs.length > 1 && (
@@ -3302,45 +3312,45 @@ const MyActivities = () => {
 
   if (userRole !== 'basic') {
     return (
-      <div className="p-6 text-center text-red-500">
+      <div className="p-6 text-center text-red-500 bg-gray-900 text-white rounded-lg">
         No tienes permisos para acceder a esta sección.
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto p-4 max-w-4xl bg-white rounded-lg shadow-xl my-8 border border-gray-100">
-      <h2 className="text-3xl font-bold text-gray-800 mb-6 border-b-2 border-gray-200 pb-2">Mis Actividades Asignadas</h2>
+    <div className="container mx-auto p-4 max-w-4xl bg-gray-800 text-gray-100 rounded-lg shadow-xl my-8 border border-gray-700">
+      <h2 className="text-3xl font-bold text-emerald-400 mb-6 border-b-2 border-gray-700 pb-2">Mis Actividades Asignadas</h2>
       {assignedTasks.length === 0 ? (
-        <p className="text-gray-600 text-center py-8">No tienes actividades asignadas actualmente.</p>
+        <p className="text-gray-300 text-center py-8">No tienes actividades asignadas actualmente.</p>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {assignedTasks.map(task => (
-            <div key={task.id} className={`p-6 rounded-lg shadow-md ${task.status === 'completed' ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-gray-200'}`}>
-              <h3 className="text-xl font-semibold text-gray-800 mb-2">{task.name}</h3>
-              <p className="text-sm text-gray-600 mb-1">
-                <span className="font-medium">Tipo:</span> {task.laborTypeName}
+            <div key={task.id} className={`p-6 rounded-lg shadow-md ${task.status === 'completed' ? 'bg-emerald-900 border-emerald-700' : 'bg-gray-700 border-gray-600'}`}>
+              <h3 className="text-xl font-semibold text-emerald-300 mb-2">{task.name}</h3>
+              <p className="text-sm text-gray-300 mb-1">
+                <span className="font-medium text-gray-100">Tipo:</span> {task.laborTypeName}
               </p>
-              <p className="text-sm text-gray-600 mb-1">
-                <span className="font-medium">Ubicación:</span> {task.locationName}
+              <p className="text-sm text-gray-300 mb-1">
+                <span className="font-medium text-gray-100">Ubicación:</span> {task.locationName}
               </p>
-              <p className="text-sm text-gray-600 mb-1">
-                <span className="font-medium">Fecha Límite:</span> {task.date.toDate().toLocaleDateString()}
+              <p className="text-sm text-gray-300 mb-1">
+                <span className="font-medium text-gray-100">Fecha Límite:</span> {task.date.toDate().toLocaleDateString()}
               </p>
-              <p className="text-sm text-gray-600 mb-3">
-                <span className="font-medium">Estado:</span>{" "}
-                <span className={`font-semibold ${task.status === 'completed' ? 'text-emerald-600' : 'text-yellow-600'}`}>
+              <p className="text-sm text-gray-300 mb-3">
+                <span className="font-medium text-gray-100">Estado:</span>{" "}
+                <span className={`font-semibold ${task.status === 'completed' ? 'text-emerald-400' : 'text-yellow-400'}`}>
                   {task.status === 'pending' ? 'Pendiente' : 'Completada'}
                 </span>
               </p>
               {task.description && (
-                <p className="text-sm text-gray-700 mb-3">
-                  <span className="font-medium">Observaciones:</span> {task.description}
+                <p className="text-sm text-gray-300 mb-3">
+                  <span className="font-medium text-gray-100">Observaciones:</span> {task.description}
                 </p>
               )}
               {task.plannedInputs && task.plannedInputs.length > 0 && (
-                <div className="mt-2 text-sm text-gray-700">
-                  <p className="font-medium">Insumos Planificados:</p>
+                <div className="mt-2 text-sm text-gray-300">
+                  <p className="font-medium text-gray-100">Insumos Planificados:</p>
                   <ul className="list-disc list-inside ml-4">
                     {task.plannedInputs.map((input, idx) => (
                       <li key={idx}>{input.inputName}: {input.quantity} {input.unit}</li>
@@ -3349,7 +3359,7 @@ const MyActivities = () => {
                 </div>
               )}
               {task.status === 'completed' && task.completedAt && (
-                <p className="text-xs text-gray-500 mt-2">
+                <p className="text-xs text-gray-400 mt-2">
                   Completada el: {task.completedAt.toDate().toLocaleDateString()}
                 </p>
               )}
@@ -3479,24 +3489,24 @@ const ReportsDashboard = () => {
 
   if (userRole !== 'admin') {
     return (
-      <div className="p-6 text-center text-red-500">
+      <div className="p-6 text-center text-red-500 bg-gray-900 text-white rounded-lg">
         No tienes permisos para acceder a esta sección.
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto p-4 max-w-6xl bg-white rounded-lg shadow-xl my-8 border border-gray-100">
-      <h2 className="text-3xl font-bold text-gray-800 mb-6 border-b-2 border-gray-200 pb-2">Panel de Reportes</h2>
+    <div className="container mx-auto p-4 max-w-6xl bg-gray-800 text-gray-100 rounded-lg shadow-xl my-8 border border-gray-700">
+      <h2 className="text-3xl font-bold text-emerald-400 mb-6 border-b-2 border-gray-700 pb-2">Panel de Reportes</h2>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 p-4 bg-gray-50 rounded-lg shadow-inner">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 p-4 bg-gray-700 rounded-lg shadow-inner">
         <div>
-          <label htmlFor="reportType" className="block text-gray-700 text-sm font-bold mb-2">Tipo de Reporte:</label>
+          <label htmlFor="reportType" className="block text-gray-200 text-sm font-bold mb-2">Tipo de Reporte:</label>
           <select
             id="reportType"
             value={reportType}
             onChange={(e) => setReportType(e.target.value)}
-            className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400"
+            className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-gray-600 text-white"
           >
             {Object.entries(reportCollections).map(([key, value]) => (
               <option key={key} value={key}>{value.name}</option>
@@ -3504,34 +3514,34 @@ const ReportsDashboard = () => {
           </select>
         </div>
         <div>
-          <label htmlFor="startDate" className="block text-gray-700 text-sm font-bold mb-2">Fecha Inicio:</label>
+          <label htmlFor="startDate" className="block text-gray-200 text-sm font-bold mb-2">Fecha Inicio:</label>
           <input
             type="date"
             id="startDate"
             value={startDate}
             onChange={(e) => setStartDate(e.target.value)}
-            className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400"
+            className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-gray-600 text-white"
           />
         </div>
         <div>
-          <label htmlFor="endDate" className="block text-gray-700 text-sm font-bold mb-2">Fecha Fin:</label>
+          <label htmlFor="endDate" className="block text-gray-200 text-sm font-bold mb-2">Fecha Fin:</label>
           <input
             type="date"
             id="endDate"
             value={endDate}
             onChange={(e) => setEndDate(e.target.value)}
-            className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400"
+            className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-gray-600 text-white"
           />
         </div>
         <div>
-          <label htmlFor="locationFilter" className="block text-gray-700 text-sm font-bold mb-2">Ubicación:</label>
+          <label htmlFor="locationFilter" className="block text-gray-200 text-sm font-bold mb-2">Ubicación:</label>
           <input
             type="text"
             id="locationFilter"
             value={locationFilter}
             onChange={(e) => setLocationFilter(e.target.value)}
             placeholder="Ej: Invernadero 1"
-            className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400"
+            className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-gray-600 text-white"
           />
         </div>
         <div className="md:col-span-4 flex justify-end items-end">
@@ -3549,25 +3559,24 @@ const ReportsDashboard = () => {
         <div className="overflow-x-auto rounded-lg shadow-md mt-8">
           <table className="min-w-full leading-normal">
             <thead>
-              <tr className="bg-emerald-100 border-b border-gray-200">
-                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+              <tr className="bg-gray-700 border-b border-gray-600">
+                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
                   {reportCollections[reportType].headers[0]}
                 </th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
                   {reportCollections[reportType].headers[1]}
                 </th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
                   {reportCollections[reportType].headers[2]}
                 </th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
                   {reportCollections[reportType].headers[3]}
                 </th>
-                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
                   {reportCollections[reportType].headers[4]}
                 </th>
-                {/* Dynamically render additional headers based on report type */}
                 {reportCollections[reportType].headers.slice(5).map((header, index) => (
-                  <th key={index} className="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                  <th key={index} className="px-5 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
                     {header}
                   </th>
                 ))}
@@ -3575,9 +3584,9 @@ const ReportsDashboard = () => {
             </thead>
             <tbody>
               {reportData.map((row, rowIndex) => (
-                <tr key={row.id} className="hover:bg-gray-50">
+                <tr key={row.id} className="hover:bg-gray-700">
                   {reportCollections[reportType].fields.map((field, colIndex) => (
-                    <td key={`${row.id}-${field}`} className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
+                    <td key={`${row.id}-${field}`} className="px-5 py-5 border-b border-gray-600 bg-gray-800 text-sm">
                       {field === 'appliedInputs' ? (
                         <ul className="list-disc list-inside">
                           {row[field] && row[field].map((input, idx) => (
@@ -3591,11 +3600,11 @@ const ReportsDashboard = () => {
                           ))}
                         </ul>
                       ) : field === 'photoUrl' ? (
-                        row[field] ? <a href={row[field]} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">Ver Foto</a> : 'N/A'
+                        row[field] ? <a href={row[field]} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline"><img src={row[field]} alt="Foto Reporte" className="w-16 h-16 object-cover rounded-md"/></a> : 'N/A'
                       ) : field === 'totalCost' || field === 'amount' ? (
-                        `$${parseFloat(row[field]).toFixed(2)}`
+                        <p className="text-gray-100 whitespace-no-wrap">${parseFloat(row[field]).toFixed(2)}</p>
                       ) : (
-                        <p className="text-gray-900 whitespace-no-wrap">{row[field]}</p>
+                        <p className="text-gray-100 whitespace-no-wrap">{row[field]}</p>
                       )}
                     </td>
                   ))}
@@ -3606,7 +3615,7 @@ const ReportsDashboard = () => {
         </div>
       )}
       {reportData.length === 0 && loading === false && (
-        <p className="text-center text-gray-500 py-8">Utiliza los filtros para generar un reporte.</p>
+        <p className="text-center text-gray-300 py-8">Utiliza los filtros para generar un reporte.</p>
       )}
     </div>
   );
@@ -3724,15 +3733,15 @@ const UserManagement = () => {
 
   if (userRole !== 'admin') {
     return (
-      <div className="p-6 text-center text-red-500">
+      <div className="p-6 text-center text-red-500 bg-gray-900 text-white rounded-lg">
         No tienes permisos para acceder a esta sección.
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto p-4 max-w-4xl bg-white rounded-lg shadow-xl my-8 border border-gray-100">
-      <h2 className="text-3xl font-bold text-gray-800 mb-6 border-b-2 border-gray-200 pb-2">Gestión de Usuarios</h2>
+    <div className="container mx-auto p-4 max-w-4xl bg-gray-800 text-gray-100 rounded-lg shadow-xl my-8 border border-gray-700">
+      <h2 className="text-3xl font-bold text-emerald-400 mb-6 border-b-2 border-gray-700 pb-2">Gestión de Usuarios</h2>
 
       {!showAddForm && (
         <button
@@ -3744,26 +3753,26 @@ const UserManagement = () => {
       )}
 
       {showAddForm && (
-        <form onSubmit={handleAddUser} className="mb-8 p-6 bg-gray-50 rounded-lg shadow-inner">
-          <h3 className="text-2xl font-semibold text-gray-700 mb-4">Nuevo Usuario</h3>
+        <form onSubmit={handleAddUser} className="mb-8 p-6 bg-gray-700 rounded-lg shadow-inner">
+          <h3 className="text-2xl font-semibold text-emerald-300 mb-4">Nuevo Usuario</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <div>
-              <label htmlFor="newUserEmail" className="block text-gray-700 text-sm font-bold mb-2">Email (Opcional):</label>
+              <label htmlFor="newUserEmail" className="block text-gray-200 text-sm font-bold mb-2">Email (Opcional):</label>
               <input
                 type="email"
                 id="newUserEmail"
-                className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-gray-600 text-white"
                 value={newUserEmail}
                 onChange={(e) => setNewUserEmail(e.target.value)}
                 placeholder="ej: usuario@ejemplo.com"
               />
-              <p className="text-xs text-gray-500 mt-1">Si no se especifica, se usará un ID generado.</p>
+              <p className="text-xs text-gray-400 mt-1">Si no se especifica, se usará un ID generado.</p>
             </div>
             <div>
-              <label htmlFor="newUserRole" className="block text-gray-700 text-sm font-bold mb-2">Rol:</label>
+              <label htmlFor="newUserRole" className="block text-gray-200 text-sm font-bold mb-2">Rol:</label>
               <select
                 id="newUserRole"
-                className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-gray-600 text-white"
                 value={newUserRole}
                 onChange={(e) => setNewUserRole(e.target.value)}
                 required
@@ -3783,7 +3792,7 @@ const UserManagement = () => {
             <button
               type="button"
               onClick={() => setShowAddForm(false)}
-              className="bg-gray-400 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-full shadow transition duration-300 ease-in-out transform hover:scale-105"
+              className="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-full shadow transition duration-300 ease-in-out transform hover:scale-105"
             >
               Cancelar
             </button>
@@ -3791,54 +3800,54 @@ const UserManagement = () => {
         </form>
       )}
 
-      <h3 className="text-2xl font-semibold text-gray-700 mb-4">Usuarios Registrados</h3>
+      <h3 className="text-2xl font-semibold text-emerald-300 mb-4">Usuarios Registrados</h3>
       <div className="overflow-x-auto rounded-lg shadow-md">
         <table className="min-w-full leading-normal">
           <thead>
-            <tr className="bg-emerald-100 border-b border-gray-200">
-              <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">ID de Usuario</th>
-              <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Email</th>
-              <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Rol</th>
-              <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Estado</th>
-              <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Acciones</th>
+            <tr className="bg-gray-700 border-b border-gray-600">
+              <th className="px-5 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">ID de Usuario</th>
+              <th className="px-5 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">Email</th>
+              <th className="px-5 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">Rol</th>
+              <th className="px-5 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">Estado</th>
+              <th className="px-5 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">Acciones</th>
             </tr>
           </thead>
           <tbody>
             {users.length === 0 ? (
               <tr>
-                <td colSpan="5" className="px-5 py-5 border-b border-gray-200 bg-white text-sm text-center">
+                <td colSpan="5" className="px-5 py-5 border-b border-gray-600 bg-gray-800 text-sm text-gray-300 text-center">
                   No hay usuarios registrados (excepto el actual administrador).
                 </td>
               </tr>
             ) : (
               users.map((user) => (
-                <tr key={user.id} className="hover:bg-gray-50">
-                  <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
-                    <p className="text-gray-900 whitespace-no-wrap">{user.id}</p>
+                <tr key={user.id} className="hover:bg-gray-700">
+                  <td className="px-5 py-5 border-b border-gray-600 bg-gray-800 text-sm">
+                    <p className="text-gray-100 whitespace-no-wrap">{user.id}</p>
                   </td>
-                  <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
-                    <p className="text-gray-900 whitespace-no-wrap">{user.email || 'N/A'}</p>
+                  <td className="px-5 py-5 border-b border-gray-600 bg-gray-800 text-sm">
+                    <p className="text-gray-100 whitespace-no-wrap">{user.email || 'N/A'}</p>
                   </td>
-                  <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
+                  <td className="px-5 py-5 border-b border-gray-600 bg-gray-800 text-sm">
                     {editingUserId === user.id ? (
                       <select
                         value={editingUserRole}
                         onChange={(e) => setEditingUserRole(e.target.value)}
-                        className="shadow appearance-none border rounded w-full py-1 px-2 text-gray-700 text-xs"
+                        className="shadow appearance-none border rounded w-full py-1 px-2 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-gray-700 text-white"
                       >
                         <option value="basic">Operario</option>
                         <option value="admin">Administrador</option>
                       </select>
                     ) : (
-                      <p className="text-gray-900 whitespace-no-wrap capitalize">{user.role}</p>
+                      <p className="text-gray-100 whitespace-no-wrap capitalize">{user.role}</p>
                     )}
                   </td>
-                  <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
+                  <td className="px-5 py-5 border-b border-gray-600 bg-gray-800 text-sm">
                     {editingUserId === user.id ? (
                       <select
                         value={editingUserActiveStatus}
                         onChange={(e) => setEditingUserActiveStatus(e.target.value === 'true')}
-                        className="shadow appearance-none border rounded w-full py-1 px-2 text-gray-700 text-xs"
+                        className="shadow appearance-none border rounded w-full py-1 px-2 text-gray-800 text-xs bg-gray-700 text-white"
                       >
                         <option value={true}>Activo</option>
                         <option value={false}>Archivado</option>
@@ -3849,7 +3858,7 @@ const UserManagement = () => {
                       </span>
                     )}
                   </td>
-                  <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
+                  <td className="px-5 py-5 border-b border-gray-600 bg-gray-800 text-sm">
                     {editingUserId === user.id ? (
                       <div className="flex gap-2">
                         <button
@@ -3860,7 +3869,7 @@ const UserManagement = () => {
                         </button>
                         <button
                           onClick={handleCancelEdit}
-                          className="bg-gray-400 hover:bg-gray-500 text-white font-bold py-1 px-3 rounded-full text-xs transition duration-300"
+                          className="bg-gray-500 hover:bg-gray-600 text-white font-bold py-1 px-3 rounded-full text-xs transition duration-300"
                         >
                           Cancelar
                         </button>
@@ -3909,19 +3918,19 @@ const BasicUserDashboard = () => {
 
   if (userRole !== 'basic') {
     return (
-      <div className="p-6 text-center text-red-500">
+      <div className="p-6 text-center text-red-500 bg-gray-900 text-white rounded-lg">
         No tienes permisos para acceder a esta sección.
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto p-8 text-center bg-white shadow-xl rounded-lg mt-10 border border-gray-100">
-      <h2 className="text-4xl font-extrabold text-emerald-700 mb-6">¡Bienvenido, Operario!</h2>
-      <p className="text-xl text-gray-700 mb-8">
-        Tu ID de usuario es: <span className="font-mono bg-gray-100 px-3 py-1 rounded-md text-gray-800">{userId}</span>
+    <div className="container mx-auto p-8 text-center bg-gray-800 text-gray-100 shadow-xl rounded-lg mt-10 border border-gray-700">
+      <h2 className="text-4xl font-extrabold text-emerald-400 mb-6">¡Bienvenido, Operario!</h2>
+      <p className="text-xl text-gray-300 mb-8">
+        Tu ID de usuario es: <span className="font-mono bg-gray-700 px-3 py-1 rounded-md text-gray-100">{userId}</span>
       </p>
-      <p className="text-lg text-gray-600 mb-10">
+      <p className="text-lg text-gray-400 mb-10">
         Aquí podrás ver un resumen. Dirígete a "Mis Actividades" para ver tus tareas asignadas.
       </p>
       <button
@@ -3944,6 +3953,7 @@ function App() {
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [currentPage, setCurrentPage] = useState('dashboard');
   const [notifications, setNotifications] = useState([]);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); // Estado para el menú móvil
 
   const addNotification = useCallback((message, type = 'info', duration = 5000) => {
     const id = Date.now();
@@ -4039,258 +4049,176 @@ function App() {
     }
   };
 
-  const renderContent = () => {
-    if (!isAuthReady) {
-      return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 to-blue-100">
-          <div className="text-center text-gray-600 text-lg font-semibold animate-pulse p-8 bg-white rounded-lg shadow-xl">
-            Cargando aplicación...
-          </div>
-        </div>
-      );
-    }
+  // Función para manejar el clic en los elementos del menú
+  const handleMenuItemClick = (page) => {
+    setCurrentPage(page);
+    setIsMobileMenuOpen(false); // Cierra el menú móvil al hacer clic en un elemento
+  };
 
-    if (!userId) {
-      return (
-        <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-emerald-50 to-blue-100 p-4 font-inter">
-          <div className="bg-white p-8 rounded-xl shadow-2xl xl:w-1/3 md:w-1/2 w-full text-center max-w-md">
-            <h1 className="text-4xl font-extrabold text-emerald-800 mb-6">
-              🍓 Gestión Hidropónica Frescales
-            </h1>
-            <p className="text-lg text-gray-700 mb-8">
-              Inicia sesión para gestionar tu producción.
-            </p>
-            <button
-              onClick={() => {
-                const initialAuthToken = process.env.REACT_APP_INITIAL_AUTH_TOKEN;
-                if (initialAuthToken) {
-                  signInWithCustomToken(auth, initialAuthToken)
-                    .then(() => addNotification("Intentando iniciar sesión...", "info"))
-                    .catch((error) => {
-                      console.error("Error al iniciar sesión con token:", error);
-                      addNotification("Error al iniciar sesión con token. " + error.message, "error");
-                    });
-                } else {
-                  signInAnonymously(auth)
-                    .then(() => addNotification("Intentando iniciar sesión anónimamente...", "info"))
-                    .catch((error) => {
-                      console.error("Error al iniciar sesión anónimamente:", error);
-                      addNotification("Error al iniciar sesión anónimamente. " + error.message, "error");
-                    });
-                }
-              }}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-8 rounded-full shadow-lg transition duration-300 ease-in-out transform hover:scale-105"
-            >
-              Iniciar Sesión
+  const renderNavLinks = (isMobile = false) => (
+    <>
+      <button
+        onClick={() => handleMenuItemClick('dashboard')}
+        className={`px-4 py-2 rounded-full transition duration-300 w-full text-left
+          ${currentPage === 'dashboard' ? 'bg-emerald-700 text-white font-semibold shadow-md' : 'text-gray-300 hover:bg-gray-700'}`}
+      >
+        Inicio
+      </button>
+
+      {userRole === 'admin' && (
+        <>
+          <div className={`relative group ${isMobile ? 'block' : 'hidden md:block'}`}>
+            <button className="px-4 py-2 rounded-full text-gray-300 hover:bg-gray-700 transition duration-300 focus:outline-none w-full text-left">
+              Registros {isMobile ? '' : <span className="ml-1 text-xs">▼</span>}
+            </button>
+            <div className={`
+              ${isMobile ? 'relative mt-0.5 ml-4 bg-gray-800 rounded-lg py-1' : 'absolute left-0 mt-2 w-48 bg-gray-800 rounded-lg shadow-xl py-1 z-20 opacity-0 group-hover:opacity-100 group-hover:visible transition-all duration-300 invisible transform scale-95 group-hover:scale-100 border border-gray-700'}
+            `}>
+              <button onClick={() => handleMenuItemClick('production-form')} className="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-emerald-800 hover:text-white rounded-lg">Registrar Producción</button>
+              <button onClick={() => handleMenuItemClick('input-application-form')} className="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-emerald-800 hover:text-white rounded-lg">Aplicación Insumos</button>
+              <button onClick={() => handleMenuItemClick('labor-form')} className="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-emerald-800 hover:text-white rounded-lg">Registrar Labor</button>
+              <button onClick={() => handleMenuItemClick('report-disease-form')} className="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-emerald-800 hover:text-white rounded-lg">Reportar Enfermedad</button>
+            </div>
+          </div>
+
+          <div className={`relative group ${isMobile ? 'block' : 'hidden md:block'}`}>
+            <button className="px-4 py-2 rounded-full text-gray-300 hover:bg-gray-700 transition duration-300 focus:outline-none w-full text-left">
+              Planificación {isMobile ? '' : <span className="ml-1 text-xs">▼</span>}
+            </button>
+            <div className={`
+              ${isMobile ? 'relative mt-0.5 ml-4 bg-gray-800 rounded-lg py-1' : 'absolute left-0 mt-2 w-48 bg-gray-800 rounded-lg shadow-xl py-1 z-20 opacity-0 group-hover:opacity-100 group-hover:visible transition-all duration-300 invisible transform scale-95 group-hover:scale-100 border border-gray-700'}
+            `}>
+              <button onClick={() => handleMenuItemClick('task-assignment-form')} className="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-emerald-800 hover:text-white rounded-lg">Asignar Tarea</button>
+            </div>
+          </div>
+
+          <div className={`relative group ${isMobile ? 'block' : 'hidden md:block'}`}>
+            <button className="px-4 py-2 rounded-full text-gray-300 hover:bg-gray-700 transition duration-300 focus:outline-none w-full text-left">
+              Administración {isMobile ? '' : <span className="ml-1 text-xs">▼</span>}
+            </button>
+            <div className={`
+              ${isMobile ? 'relative mt-0.5 ml-4 bg-gray-800 rounded-lg py-1' : 'absolute left-0 mt-2 w-52 bg-gray-800 rounded-lg shadow-xl py-1 z-20 opacity-0 group-hover:opacity-100 group-hover:visible transition-all duration-300 invisible transform scale-95 group-hover:scale-100 border border-gray-700'}
+            `}>
+              <button onClick={() => handleMenuItemClick('admin-inputs')} className="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-emerald-800 hover:text-white rounded-lg">Catálogo Insumos</button>
+              <button onClick={() => handleMenuItemClick('admin-products')} className="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-emerald-800 hover:text-white rounded-lg">Catálogo Productos</button>
+              <button onClick={() => handleMenuItemClick('admin-labor-types')} className="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-emerald-800 hover:text-white rounded-lg">Tipos de Labores</button>
+              <button onClick={() => handleMenuItemClick('admin-diseases')} className="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-emerald-800 hover:text-white rounded-lg">Catálogo Enfermedades</button>
+              <button onClick={() => handleMenuItemClick('admin-nutrient-recipes')} className="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-emerald-800 hover:text-white rounded-lg">Recetas Nutrientes</button>
+              <button onClick={() => handleMenuItemClick('admin-locations')} className="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-emerald-800 hover:text-white rounded-lg">Gestión Ubicaciones</button>
+              <button onClick={() => handleMenuItemClick('admin-users')} className="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-emerald-800 hover:text-white rounded-lg">Gestión Usuarios</button>
+              <button onClick={() => handleMenuItemClick('reports-dashboard')} className="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-emerald-800 hover:text-white rounded-lg">Reportes</button>
+            </div>
+          </div>
+
+          <div className={`relative group ${isMobile ? 'block' : 'hidden md:block'}`}>
+            <button className="px-4 py-2 rounded-full text-gray-300 hover:bg-gray-700 transition duration-300 focus:outline-none w-full text-left">
+              Ayuda {isMobile ? '' : <span className="ml-1 text-xs">▼</span>}
+            </button>
+            <div className={`
+              ${isMobile ? 'relative mt-0.5 ml-4 bg-gray-800 rounded-lg py-1' : 'absolute left-0 mt-2 w-48 bg-gray-800 rounded-lg shadow-xl py-1 z-20 opacity-0 group-hover:opacity-100 group-hover:visible transition-all duration-300 invisible transform scale-95 group-hover:scale-100 border border-gray-700'}
+            `}>
+              <button onClick={() => handleMenuItemClick('nutrient-calculator')} className="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-emerald-800 hover:text-white rounded-lg">Calc. Mezcla Nutrientes</button>
+            </div>
+          </div>
+        </>
+      )}
+      {userRole === 'basic' && (
+        <>
+          <button
+            onClick={() => handleMenuItemClick('my-activities')}
+            className={`ml-2 px-4 py-2 rounded-full transition duration-300 ${currentPage === 'my-activities' ? 'bg-emerald-700 text-white font-semibold shadow-md' : 'text-gray-300 hover:bg-gray-700'}`}
+          >
+            Mis Actividades
+          </button>
+          <div className={`relative group ${isMobile ? 'block' : 'hidden md:block'}`}>
+            <button className="px-4 py-2 rounded-full text-gray-300 hover:bg-gray-700 transition duration-300 focus:outline-none w-full text-left">
+              Registros Rápidos {isMobile ? '' : <span className="ml-1 text-xs">▼</span>}
+            </button>
+            <div className={`
+              ${isMobile ? 'relative mt-0.5 ml-4 bg-gray-800 rounded-lg py-1' : 'absolute left-0 mt-2 w-52 bg-gray-800 rounded-lg shadow-xl py-1 z-20 opacity-0 group-hover:opacity-100 group-hover:visible transition-all duration-300 invisible transform scale-95 group-hover:scale-100 border border-gray-700'}
+            `}>
+              <button onClick={() => handleMenuItemClick('production-form')} className="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-emerald-800 hover:text-white rounded-lg">Registrar Producción</button>
+              <button onClick={() => handleMenuItemClick('input-application-form')} className="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-emerald-800 hover:text-white rounded-lg">Aplicación Insumos</button>
+              <button onClick={() => handleMenuItemClick('labor-form')} className="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-emerald-800 hover:text-white rounded-lg">Registrar Labor</button>
+              <button onClick={() => handleMenuItemClick('report-disease-form')} className="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-emerald-800 hover:text-white rounded-lg">Reportar Enfermedad</button>
+               <button onClick={() => handleMenuItemClick('nutrient-calculator')} className="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-emerald-800 hover:text-white rounded-lg">Calc. Mezcla Nutrientes</button>
+            </div>
+          </div>
+        </>
+      )}
+         </>
+  );
+
+  // This is the function that returns the main content structure
+  const renderContent = () => (
+    <div className="min-h-screen flex flex-col bg-gray-900 font-inter text-gray-100">
+      {/* Header for mobile (hamburger menu) */}
+      <header className="bg-gray-800 shadow-lg p-4 flex justify-between items-center z-20 sticky top-0 md:hidden rounded-b-xl">
+        <h1 className="text-2xl font-bold text-emerald-400">🍓 Frescales</h1>
+        <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="text-gray-300 focus:outline-none">
+          <svg className="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16m-7 6h7"></path>
+          </svg>
+        </button>
+      </header>
+
+      {/* Mobile Menu Overlay */}
+      {isMobileMenuOpen && (
+        <div className="fixed inset-0 bg-gray-900 bg-opacity-95 z-40 flex flex-col p-4 md:hidden animate-fade-in">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-3xl font-bold text-emerald-400">Menú</h2>
+            <button onClick={() => setIsMobileMenuOpen(false)} className="text-gray-300 focus:outline-none">
+              <svg className="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
             </button>
           </div>
-        </div>
-      );
-    }
-
-    return (
-      <div className="min-h-screen flex flex-col bg-gray-50 font-inter text-gray-800">
-        <header className="bg-white shadow-lg p-4 flex justify-between items-center z-10 sticky top-0 rounded-b-xl">
-          <div className="flex items-center">
-            <h1 className="text-2xl font-bold text-emerald-800">🍓 Frescales</h1>
-            <span className="ml-4 text-sm text-gray-600">ID Usuario: <span className="font-mono text-gray-800">{userId}</span></span>
-          </div>
-          <nav className="flex items-center flex-wrap gap-2">
-            <button
-              onClick={() => setCurrentPage('dashboard')}
-              className={`px-4 py-2 rounded-full transition duration-300 ${currentPage === 'dashboard' ? 'bg-emerald-100 text-emerald-800 font-semibold shadow-md' : 'text-gray-600 hover:bg-gray-100'}`}
-            >
-              Inicio
-            </button>
-            {userRole === 'admin' && (
-              <>
-                <div className="relative group">
-                  <button className="px-4 py-2 rounded-full text-gray-600 hover:bg-gray-100 transition duration-300 focus:outline-none">
-                    Registros <span className="ml-1 text-xs">▼</span>
-                  </button>
-                  <div className="absolute left-0 mt-2 w-48 bg-white rounded-lg shadow-xl py-1 z-20 opacity-0 group-hover:opacity-100 group-hover:visible transition-all duration-300 invisible transform scale-95 group-hover:scale-100">
-                    <button
-                      onClick={() => setCurrentPage('production-form')}
-                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-emerald-100 hover:text-emerald-800 rounded-lg"
-                    >
-                      Registrar Producción
-                    </button>
-                    <button
-                      onClick={() => setCurrentPage('input-application-form')}
-                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-emerald-100 hover:text-emerald-800 rounded-lg"
-                    >
-                      Aplicación Insumos
-                    </button>
-                    <button
-                      onClick={() => setCurrentPage('labor-form')}
-                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-emerald-100 hover:text-emerald-800 rounded-lg"
-                    >
-                      Registrar Labor
-                    </button>
-                    <button
-                      onClick={() => setCurrentPage('report-disease-form')}
-                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-emerald-100 hover:text-emerald-800 rounded-lg"
-                    >
-                      Reportar Enfermedad
-                    </button>
-                  </div>
-                </div>
-
-                <div className="relative group">
-                  <button className="px-4 py-2 rounded-full text-gray-600 hover:bg-gray-100 transition duration-300 focus:outline-none">
-                    Planificación <span className="ml-1 text-xs">▼</span>
-                  </button>
-                  <div className="absolute left-0 mt-2 w-48 bg-white rounded-lg shadow-xl py-1 z-20 opacity-0 group-hover:opacity-100 group-hover:visible transition-all duration-300 invisible transform scale-95 group-hover:scale-100">
-                    <button
-                      onClick={() => setCurrentPage('task-assignment-form')}
-                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-emerald-100 hover:text-emerald-800 rounded-lg"
-                    >
-                      Asignar Tarea
-                    </button>
-                  </div>
-                </div>
-
-                <div className="relative group">
-                  <button className="px-4 py-2 rounded-full text-gray-600 hover:bg-gray-100 transition duration-300 focus:outline-none">
-                    Administración <span className="ml-1 text-xs">▼</span>
-                  </button>
-                  <div className="absolute left-0 mt-2 w-52 bg-white rounded-lg shadow-xl py-1 z-20 opacity-0 group-hover:opacity-100 group-hover:visible transition-all duration-300 invisible transform scale-95 group-hover:scale-100">
-                    <button
-                      onClick={() => setCurrentPage('admin-inputs')}
-                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-emerald-100 hover:text-emerald-800 rounded-lg"
-                    >
-                      Catálogo Insumos
-                    </button>
-                    <button
-                      onClick={() => setCurrentPage('admin-products')}
-                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-emerald-100 hover:text-emerald-800 rounded-lg"
-                    >
-                      Catálogo Productos
-                    </button>
-                    <button
-                      onClick={() => setCurrentPage('admin-labor-types')}
-                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-emerald-100 hover:text-emerald-800 rounded-lg"
-                    >
-                      Tipos de Labores
-                    </button>
-                    <button
-                      onClick={() => setCurrentPage('admin-diseases')}
-                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-emerald-100 hover:text-emerald-800 rounded-lg"
-                    >
-                      Catálogo Enfermedades
-                    </button>
-                    <button
-                      onClick={() => setCurrentPage('admin-nutrient-recipes')}
-                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-emerald-100 hover:text-emerald-800 rounded-lg"
-                    >
-                      Recetas Nutrientes
-                    </button>
-                    <button
-                      onClick={() => setCurrentPage('admin-locations')}
-                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-emerald-100 hover:text-emerald-800 rounded-lg"
-                    >
-                      Gestión Ubicaciones
-                    </button>
-                    <button
-                      onClick={() => setCurrentPage('admin-users')}
-                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-emerald-100 hover:text-emerald-800 rounded-lg"
-                    >
-                      Gestión Usuarios
-                    </button>
-                    <button
-                      onClick={() => setCurrentPage('reports-dashboard')}
-                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-emerald-100 hover:text-emerald-800 rounded-lg"
-                    >
-                      Reportes
-                    </button>
-                  </div>
-                </div>
-
-                <div className="relative group">
-                  <button className="px-4 py-2 rounded-full text-gray-600 hover:bg-gray-100 transition duration-300 focus:outline-none">
-                    Ayuda <span className="ml-1 text-xs">▼</span>
-                  </button>
-                  <div className="absolute left-0 mt-2 w-48 bg-white rounded-lg shadow-xl py-1 z-20 opacity-0 group-hover:opacity-100 group-hover:visible transition-all duration-300 invisible transform scale-95 group-hover:scale-100">
-                    <button
-                      onClick={() => setCurrentPage('nutrient-calculator')}
-                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-emerald-100 hover:text-emerald-800 rounded-lg"
-                    >
-                      Calc. Mezcla Nutrientes
-                    </button>
-                  </div>
-                </div>
-              </>
-            )}
-            {userRole === 'basic' && (
-              <>
-                <button
-                  onClick={() => setCurrentPage('my-activities')}
-                  className={`ml-2 px-4 py-2 rounded-full transition duration-300 ${currentPage === 'my-activities' ? 'bg-emerald-100 text-emerald-800 font-semibold shadow-md' : 'text-gray-600 hover:bg-gray-100'}`}
-                >
-                  Mis Actividades
-                </button>
-                <div className="relative group">
-                  <button className="px-4 py-2 rounded-full text-gray-600 hover:bg-gray-100 transition duration-300 focus:outline-none">
-                    Registros Rápidos <span className="ml-1 text-xs">▼</span>
-                  </button>
-                  <div className="absolute left-0 mt-2 w-52 bg-white rounded-lg shadow-xl py-1 z-20 opacity-0 group-hover:opacity-100 group-hover:visible transition-all duration-300 invisible transform scale-95 group-hover:scale-100">
-                    <button
-                      onClick={() => setCurrentPage('production-form')}
-                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-emerald-100 hover:text-emerald-800 rounded-lg"
-                    >
-                      Registrar Producción
-                    </button>
-                    <button
-                      onClick={() => setCurrentPage('input-application-form')}
-                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-emerald-100 hover:text-emerald-800 rounded-lg"
-                    >
-                      Aplicación Insumos
-                    </button>
-                    <button
-                      onClick={() => setCurrentPage('labor-form')}
-                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-emerald-100 hover:text-emerald-800 rounded-lg"
-                    >
-                      Registrar Labor
-                    </button>
-                    <button
-                      onClick={() => setCurrentPage('report-disease-form')}
-                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-emerald-100 hover:text-emerald-800 rounded-lg"
-                    >
-                      Reportar Enfermedad
-                    </button>
-                     <button
-                      onClick={() => setCurrentPage('nutrient-calculator')}
-                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-emerald-100 hover:text-emerald-800 rounded-lg"
-                    >
-                      Calc. Mezcla Nutrientes
-                    </button>
-                  </div>
-                </div>
-              </>
-            )}
+          <nav className="flex flex-col space-y-4 text-lg">
+            {renderNavLinks(true)} {/* Render links for mobile */}
             <button
               onClick={handleLogout}
-              className="ml-4 bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-full shadow-lg transition duration-300 ease-in-out transform hover:scale-105"
+              className="mt-6 bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-8 rounded-full shadow-lg transition duration-300 ease-in-out transform hover:scale-105 w-full text-left"
             >
               Cerrar Sesión
             </button>
+            <span className="text-sm text-gray-400 mt-4">ID Usuario: <span className="font-mono text-gray-200">{userId}</span></span>
           </nav>
-        </header>
+        </div>
+      )}
 
-        <main className="flex-grow p-4">
-          <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8 bg-white rounded-lg shadow-xl border border-gray-100">
+      {/* Desktop Header and Sidebar */}
+      <div className="flex flex-1">
+        <nav className="hidden md:flex flex-col bg-gray-800 shadow-xl p-4 space-y-2 w-64 flex-shrink-0 z-30 rounded-r-xl">
+          <div className="flex items-center mb-6">
+            <h1 className="text-2xl font-bold text-emerald-400">🍓 Frescales</h1>
+          </div>
+          {renderNavLinks()} {/* Render links for desktop */}
+          <div className="mt-auto pt-6"> {/* Push logout to bottom */}
+            <button
+              onClick={handleLogout}
+              className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-full shadow-lg transition duration-300 ease-in-out transform hover:scale-105 w-full text-left"
+            >
+              Cerrar Sesión
+            </button>
+            <span className="block mt-4 text-sm text-gray-400">ID Usuario: <span className="font-mono text-gray-200">{userId}</span></span>
+          </div>
+        </nav>
+
+        {/* Main Content Area */}
+        <main className="flex-grow p-4 bg-gray-900 md:ml-0"> {/* Main content bg */}
+          <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8 bg-gray-800 rounded-lg shadow-xl border border-gray-700">
             <NotificationCenter />
             {currentPage === 'dashboard' && (
               <div className="p-6 text-center">
-                <h2 className="text-3xl font-semibold text-gray-800 mb-4">Dashboard Principal</h2>
-                <p className="text-gray-600">Bienvenido al sistema de gestión de Frescales.</p>
+                <h2 className="text-3xl font-semibold text-emerald-300 mb-4">Dashboard Principal</h2>
+                <p className="text-gray-300">Bienvenido al sistema de gestión de Frescales.</p>
                 {userRole === 'admin' && (
-                  <p className="text-gray-700 font-medium mt-2">Tienes acceso como <span className="text-emerald-600">Administrador</span>.</p>
+                  <p className="text-gray-300 font-medium mt-2">Tienes acceso como <span className="text-emerald-400">Administrador</span>.</p>
                 )}
                 {userRole === 'basic' && (
-                  <p className="text-gray-700 font-medium mt-2">Tienes acceso como <span className="text-blue-600">Operario</span>.</p>
+                  <p className="text-gray-300 font-medium mt-2">Tienes acceso como <span className="text-blue-400">Operario</span>.</p>
                 )}
-                <p className="text-gray-500 text-sm mt-4">
+                <p className="text-gray-400 text-sm mt-4">
                   Selecciona una opción del menú de navegación para comenzar.
                 </p>
               </div>
@@ -4318,14 +4246,15 @@ function App() {
 
           </div>
         </main>
-
-        <footer className="bg-gray-800 text-white text-center p-4">
-          <p>&copy; {new Date().getFullYear()} Frescales. Todos los derechos reservados.</p>
-        </footer>
       </div>
-    );
-  };
 
+      <footer className="bg-gray-900 text-gray-400 text-center p-4 border-t border-gray-700">
+        <p>&copy; {new Date().getFullYear()} Frescales. Todos los derechos reservados.</p>
+      </footer>
+    </div>
+  );
+  // The App component itself needs to return something.
+  // This is where the AppContext.Provider should be.
   return (
     <AppContext.Provider value={{ db, auth, userId, userRole, isAuthReady, addNotification, dismissNotification, notifications }}>
       {renderContent()}

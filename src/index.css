@@ -1,4 +1,31 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+    @tailwind base;
+    @tailwind components;
+    @tailwind utilities;
 
+    /* Estilos globales de la aplicación para el modo oscuro */
+    body {
+      background-color: #1a202c; /* Fondo oscuro de Tailwind: gray-900 */
+      color: #cbd5e0; /* Texto claro de Tailwind: gray-300 */
+      font-family: 'Inter', sans-serif; /* Asumiendo que 'Inter' es la fuente deseada */
+      margin: 0;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    /* Ajustes para Scrollbar si quieres un estilo dark-mode */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #2d3748; /* gray-800 */
+      border-radius: 10px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #4a5568; /* gray-700 */
+      border-radius: 10px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #5a677e; /* gray-600 */
+    }
+    
