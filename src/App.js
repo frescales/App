@@ -1,6 +1,6 @@
 import React, { useState, useEffect, createContext, useContext, useCallback } from 'react';
 import { initializeApp } from 'firebase/app';
-import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from 'firebase/auth'; // Added signInWithEmailAndPassword
+import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, createUserWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { getFirestore, collection, doc, getDoc, setDoc, updateDoc, onSnapshot, query, where, addDoc, getDocs, deleteDoc } from 'firebase/firestore';
 // Importa getStorage y ref desde 'firebase/storage' si quieres usar Firebase Storage
 // import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -2882,7 +2882,7 @@ const TaskAssignmentForm = () => {
   const { db, userId, isAuthReady, userRole, addNotification } = useContext(AppContext);
   const locations = useLocations();
   const [laborTypes, setLaborTypes] = useState([]);
-  const [operators, setOperators] = useState([]);
+  const [operators, setOperators] = useState([]); // Estado para almacenar los operarios
   const [inputsCatalog, setInputsCatalog] = useState([]);
 
   const [formData, setFormData] = useState({
@@ -2891,7 +2891,7 @@ const TaskAssignmentForm = () => {
     date: new Date().toISOString().split('T')[0],
     locationId: '',
     laborTypeId: '',
-    assignedToUserId: '',
+    assignedToUserId: '', // ¡Este es el campo añadido!
     plannedInputs: [{ inputId: '', quantity: '', unit: '' }],
   });
   const [showPlannedInputs, setShowPlannedInputs] = useState(false);
@@ -2925,6 +2925,7 @@ const TaskAssignmentForm = () => {
         }
       );
 
+      // Obtener usuarios con rol 'basic' para la asignación
       const unsubscribeOperators = onSnapshot(
         query(collection(db, `artifacts/${appId}/public/data/users`), where('role', '==', 'basic'), where('isActive', '==', true)),
         (snapshot) => {
@@ -3069,7 +3070,7 @@ const TaskAssignmentForm = () => {
         laborTypeId: formData.laborTypeId,
         laborTypeName: selectedLaborType.name,
         assignedToUserId: formData.assignedToUserId,
-        assignedToUserName: assignedOperator.email || assignedOperator.id,
+        assignedToUserName: assignedOperator.email || assignedOperator.id, // Guardar el email o ID del operario
         status: 'pending',
         assignedByUserId: userId,
         createdAt: new Date(),
@@ -3166,7 +3167,24 @@ const TaskAssignmentForm = () => {
               ))}
             </select>
           </div>
-          <div className="md:col-span-2">
+          {/* Campo añadido para asignar a un operario */}
+          <div>
+            <label htmlFor="assignedToUserId" className="block text-gray-200 text-sm font-bold mb-2">Asignar a:</label>
+            <select
+              id="assignedToUserId"
+              name="assignedToUserId"
+              value={formData.assignedToUserId}
+              onChange={handleChange}
+              className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent bg-gray-700 text-white"
+              required
+            >
+              <option value="">Selecciona un operario</option>
+              {operators.map(operator => (
+                <option key={operator.id} value={operator.id}>{operator.email || operator.id}</option>
+              ))}
+            </select>
+          </div>
+          <div className="md:col-span-2"> {/* Asegúrate de que este div abarque correctamente el espacio restante si el grid tiene 2 columnas */}
             <label htmlFor="description" className="block text-gray-200 text-sm font-bold mb-2">Descripción / Observaciones:</label>
             <textarea
               id="description"
@@ -3261,7 +3279,6 @@ const TaskAssignmentForm = () => {
     </div>
   );
 };
-
 
 // Componente para ver las actividades asignadas a un operario
 const MyActivities = () => {
@@ -3624,10 +3641,11 @@ const ReportsDashboard = () => {
 
 // Componente para la Gestión de Usuarios
 const UserManagement = () => {
-  const { db, userId, isAuthReady, userRole, addNotification } = useContext(AppContext);
+  const { db, auth, userId, isAuthReady, userRole, addNotification } = useContext(AppContext);
   const [users, setUsers] = useState([]);
   const [newUserEmail, setNewUserEmail] = useState('');
   const [newUserRole, setNewUserRole] = useState('basic');
+  const [newUserPassword, setNewUserPassword] = useState(''); // Nuevo: para la clave del nuevo usuario
   const [editingUserId, setEditingUserId] = useState(null);
   const [editingUserRole, setEditingUserRole] = useState('');
   const [editingUserActiveStatus, setEditingUserActiveStatus] = useState(true);
@@ -3640,6 +3658,7 @@ const UserManagement = () => {
 
       const unsubscribe = onSnapshot(usersColRef, (snapshot) => {
         const usersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        // Filtramos al usuario actual para que no se pueda editar a sí mismo aquí fácilmente
         setUsers(usersData.filter(user => user.id !== userId));
       }, (error) => {
         console.error("Error al obtener la lista de usuarios:", error);
@@ -3649,15 +3668,29 @@ const UserManagement = () => {
     }
   }, [db, userId, isAuthReady, userRole, addNotification]);
 
+  // Función para generar una clave aleatoria simple
+  const generateRandomPassword = () => {
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()";
+    let password = "";
+    for (let i = 0; i < 12; i++) { // Longitud de la clave
+      password += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return password;
+  };
+
   const handleAddUser = async (e) => {
     e.preventDefault();
-    if (!newUserEmail.trim()) {
-      addNotification("El email del usuario no puede estar vacío.", "warning");
+    if (!newUserEmail.trim() || !newUserPassword.trim()) {
+      addNotification("El email y la contraseña del usuario no pueden estar vacíos.", "warning");
       return;
     }
-    const newUid = `user_${Math.random().toString(36).substring(2, 10)}`;
 
     try {
+      // 1. Crear el usuario en Firebase Authentication
+      const userCredential = await createUserWithEmailAndPassword(auth, newUserEmail.trim(), newUserPassword.trim());
+      const newUid = userCredential.user.uid;
+
+      // 2. Guardar la información del usuario en Firestore (utilizando el UID de Auth)
       const appId = process.env.REACT_APP_APP_ID || 'default-app-id';
       const userDocRef = doc(db, `artifacts/${appId}/public/data/users`, newUid);
       await setDoc(userDocRef, {
@@ -3666,14 +3699,23 @@ const UserManagement = () => {
         isActive: true,
         createdAt: new Date(),
         createdBy: userId,
+        // No guardamos la contraseña en Firestore por seguridad
       });
-      addNotification(`Usuario añadido exitosamente. Su ID es: ${newUid}`, "success");
+
+      addNotification(`Usuario ${newUserEmail.trim()} añadido exitosamente con ID: ${newUid}. Clave asignada: ${newUserPassword.trim()}.`, "success", 10000); // Muestra la clave temporalmente
       setNewUserEmail('');
       setNewUserRole('basic');
+      setNewUserPassword('');
       setShowAddForm(false);
     } catch (error) {
       console.error("Error al añadir usuario:", error);
-      addNotification("Error al añadir usuario.", "error");
+      let errorMessage = "Error al añadir usuario.";
+      if (error.code === 'auth/email-already-in-use') {
+        errorMessage = "El email proporcionado ya está en uso por otra cuenta.";
+      } else if (error.code === 'auth/weak-password') {
+        errorMessage = "La contraseña es demasiado débil. Debe tener al menos 6 caracteres.";
+      }
+      addNotification(errorMessage, "error");
     }
   };
 
@@ -3731,6 +3773,29 @@ const UserManagement = () => {
     }
   };
 
+  // Nueva función para enviar restablecimiento de contraseña
+  const handleSendPasswordReset = async (userEmail) => {
+    if (!userEmail || userEmail === 'N/A') {
+      addNotification("No se puede restablecer la contraseña para un usuario sin email.", "warning");
+      return;
+    }
+    if (!window.confirm(`¿Estás seguro de que quieres enviar un correo de restablecimiento de contraseña a ${userEmail}?`)) {
+      return;
+    }
+    try {
+      await sendPasswordResetEmail(auth, userEmail);
+      addNotification(`Correo de restablecimiento enviado a ${userEmail}.`, "info");
+    } catch (error) {
+      console.error("Error al enviar correo de restablecimiento:", error);
+      let errorMessage = "Error al enviar correo de restablecimiento.";
+      if (error.code === 'auth/user-not-found') {
+        errorMessage = "No se encontró un usuario con ese email.";
+      }
+      addNotification(errorMessage, "error");
+    }
+  };
+
+
   if (userRole !== 'admin') {
     return (
       <div className="p-6 text-center text-red-500 bg-gray-900 text-white rounded-lg">
@@ -3757,7 +3822,7 @@ const UserManagement = () => {
           <h3 className="text-2xl font-semibold text-emerald-300 mb-4">Nuevo Usuario</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <div>
-              <label htmlFor="newUserEmail" className="block text-gray-200 text-sm font-bold mb-2">Email (Opcional):</label>
+              <label htmlFor="newUserEmail" className="block text-gray-200 text-sm font-bold mb-2">Email:</label>
               <input
                 type="email"
                 id="newUserEmail"
@@ -3765,8 +3830,8 @@ const UserManagement = () => {
                 value={newUserEmail}
                 onChange={(e) => setNewUserEmail(e.target.value)}
                 placeholder="ej: usuario@ejemplo.com"
+                required // Email ahora es obligatorio para crear cuentas con contraseña
               />
-              <p className="text-xs text-gray-400 mt-1">Si no se especifica, se usará un ID generado.</p>
             </div>
             <div>
               <label htmlFor="newUserRole" className="block text-gray-200 text-sm font-bold mb-2">Rol:</label>
@@ -3781,6 +3846,30 @@ const UserManagement = () => {
                 <option value="admin">Administrador</option>
               </select>
             </div>
+            <div className="md:col-span-2">
+              <label htmlFor="newUserPassword" className="block text-gray-200 text-sm font-bold mb-2">Contraseña Inicial:</label>
+              <div className="flex gap-2">
+                <input
+                  type="text" // Cambiado a text para poder ver la clave generada
+                  id="newUserPassword"
+                  className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-gray-600 text-white"
+                  value={newUserPassword}
+                  onChange={(e) => setNewUserPassword(e.target.value)}
+                  placeholder="Se recomienda generar una clave"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setNewUserPassword(generateRandomPassword())}
+                  className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-full shadow-lg transition duration-300 ease-in-out transform hover:scale-105"
+                >
+                  Generar
+                </button>
+              </div>
+              <p className="text-xs text-gray-400 mt-1">
+                La contraseña debe tener al menos 6 caracteres. Considera notificar la clave al usuario de forma segura.
+              </p>
+            </div>
           </div>
           <div className="flex justify-end gap-2">
             <button
@@ -3791,7 +3880,12 @@ const UserManagement = () => {
             </button>
             <button
               type="button"
-              onClick={() => setShowAddForm(false)}
+              onClick={() => {
+                setShowAddForm(false);
+                setNewUserEmail('');
+                setNewUserRole('basic');
+                setNewUserPassword('');
+              }}
               className="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-full shadow transition duration-300 ease-in-out transform hover:scale-105"
             >
               Cancelar
@@ -3875,7 +3969,7 @@ const UserManagement = () => {
                         </button>
                       </div>
                     ) : (
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 flex-wrap"> {/* Flex-wrap para botones adicionales */}
                         <button
                           onClick={() => handleEditUser(user)}
                           className="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-1 px-3 rounded-full text-xs transition duration-300"
@@ -3888,6 +3982,14 @@ const UserManagement = () => {
                         >
                           {user.isActive ? 'Archivar' : 'Activar'}
                         </button>
+                        {user.email && ( // Solo muestra el botón si el usuario tiene un email asociado
+                            <button
+                                onClick={() => handleSendPasswordReset(user.email)}
+                                className="bg-orange-500 hover:bg-orange-600 text-white font-bold py-1 px-3 rounded-full text-xs transition duration-300 mt-1 md:mt-0"
+                            >
+                                Restablecer Clave
+                            </button>
+                        )}
                       </div>
                     )}
                   </td>
@@ -3900,7 +4002,6 @@ const UserManagement = () => {
     </div>
   );
 };
-
 
 // Componente de prueba para usuarios básicos (mantengo el original para la navegación)
 const BasicUserDashboard = () => {
