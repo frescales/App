@@ -1,4 +1,4 @@
-import React, { useState, useEffect, createContext, useContext, useCallback } from 'react';
+import React, { useState, useEffect, createContext, useContext, useCallback, useMemo } from 'react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, createUserWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { getFirestore, collection, doc, getDoc, setDoc, updateDoc, onSnapshot, query, where, addDoc, getDocs, deleteDoc } from 'firebase/firestore';
@@ -755,7 +755,7 @@ const LocationCatalog = () => {
   );
 };
 
-// Componente para la gestión de catálogo de insumos (CORREGIDO)
+// Componente para la gestión de catálogo de insumos (ACTUALIZADO CON BUSCADOR Y FILTRO)
 const InputCatalog = () => {
     const { db, userId, isAuthReady, userRole, addNotification } = useContext(AppContext);
     const units = useUnits();
@@ -767,6 +767,10 @@ const InputCatalog = () => {
     });
     const [editingInput, setEditingInput] = useState(null);
     const [showAddForm, setShowAddForm] = useState(false);
+    
+    // **NUEVO**: Estados para el buscador y el filtro
+    const [searchTerm, setSearchTerm] = useState('');
+    const [typeFilter, setTypeFilter] = useState('');
 
     useEffect(() => {
         if (db && isAuthReady && userRole === 'admin') {
@@ -782,6 +786,43 @@ const InputCatalog = () => {
             return () => unsubscribe();
         }
     }, [db, isAuthReady, userRole, addNotification]);
+
+    // **NUEVO**: Lógica de filtrado y búsqueda
+    const filteredInputs = useMemo(() => {
+        return inputs
+            .filter(input => {
+                // Filtro por tipo de insumo
+                if (typeFilter && input.inputTypeId !== typeFilter) {
+                    return false;
+                }
+                // Filtro por término de búsqueda
+                if (searchTerm) {
+                    const lowercasedSearchTerm = searchTerm.toLowerCase();
+                    const nameMatch = input.name.toLowerCase().includes(lowercasedSearchTerm);
+                    const componentMatch = input.activeComponents?.some(comp => 
+                        comp.name.toLowerCase().includes(lowercasedSearchTerm)
+                    );
+                    return nameMatch || componentMatch;
+                }
+                return true;
+            });
+    }, [inputs, searchTerm, typeFilter]);
+
+    // **NUEVO**: Lógica para agrupar los insumos filtrados
+    const groupedInputs = useMemo(() => {
+        // No agrupar si se está filtrando por un tipo específico
+        if (typeFilter) return null;
+
+        return filteredInputs.reduce((acc, input) => {
+            const typeName = input.inputTypeName || 'Sin Tipo';
+            if (!acc[typeName]) {
+                acc[typeName] = [];
+            }
+            acc[typeName].push(input);
+            return acc;
+        }, {});
+    }, [filteredInputs, typeFilter]);
+
 
     const handleNewInputChange = (e) => {
         const { name, value } = e.target;
@@ -852,7 +893,7 @@ const InputCatalog = () => {
     const handleSaveInput = async (e) => {
         e.preventDefault();
         const { id, unitId, inputTypeId, price, activeComponents } = editingInput;
-        if (!unitId || !inputTypeId || !price) return addNotification("Rellena los campos principales.", "warning");
+        if (!unitId || !inputTypeId || !price) return addNotification("Rellena todos los campos principales.", "warning");
 
         const selectedUnit = units.find(u => u.id === unitId);
         const selectedType = inputTypes.find(t => t.id === inputTypeId);
@@ -889,6 +930,30 @@ const InputCatalog = () => {
 
     if (userRole !== 'admin') return <div className="p-6 text-center text-red-500 bg-gray-900 text-white rounded-lg">No tienes permisos.</div>;
     
+    // Componente interno para renderizar las filas de la tabla
+    const renderTableRow = (input) => (
+        <tr key={input.id} className="hover:bg-gray-700">
+            <td className="px-5 py-5 border-b border-gray-600 bg-gray-800 text-sm"><p className="text-gray-100">{input.name}</p></td>
+            <td className="px-5 py-5 border-b border-gray-600 bg-gray-800 text-sm"><p className="text-gray-100">{input.inputTypeName}</p></td>
+            <td className="px-5 py-5 border-b border-gray-600 bg-gray-800 text-sm"><p className="text-gray-100">{input.unitAbbreviation}</p></td>
+            <td className="px-5 py-5 border-b border-gray-600 bg-gray-800 text-sm"><p className="text-gray-100">${input.price ? input.price.toFixed(2) : '0.00'}</p></td>
+            <td className="px-5 py-5 border-b border-gray-600 bg-gray-800 text-sm">
+                {input.activeComponents && input.activeComponents.length > 0 ? (
+                  <ul className="list-disc list-inside text-gray-100 text-xs">
+                      {input.activeComponents.map((c, i) => <li key={i}>{c.name}: {c.percentage}%</li>)}
+                  </ul>
+                ) : ( <p className="text-gray-400 text-xs">N/A</p> )}
+            </td>
+            <td className="px-5 py-5 border-b border-gray-600 bg-gray-800 text-sm">
+                <div className="flex gap-2">
+                    <button onClick={() => handleEditInput(input)} className="bg-yellow-500 text-white font-bold py-1 px-3 rounded-full text-xs">Editar</button>
+                    <button onClick={() => handleArchiveInput(input.id)} className="bg-red-500 text-white font-bold py-1 px-3 rounded-full text-xs">Archivar</button>
+                </div>
+            </td>
+        </tr>
+    );
+
+
     return (
         <div className="container mx-auto p-4 max-w-5xl bg-gray-800 text-gray-100 rounded-lg shadow-xl my-8 border border-gray-700">
             <h2 className="text-3xl font-bold text-emerald-400 mb-6 border-b-2 border-gray-700 pb-2">Gestión de Insumos</h2>
@@ -903,33 +968,56 @@ const InputCatalog = () => {
             {editingInput && <InputAddEditForm isEditing={true} data={editingInput} changeHandler={handleEditingInputChange} componentChangeHandler={(index, e) => handleActiveComponentChange(index, e, true)} submitHandler={handleSaveInput} cancelHandler={handleCancelEdit} addActiveComponentRow={(isEditing) => addActiveComponentRow(isEditing)} removeActiveComponentRow={(index, isEditing) => removeActiveComponentRow(index, isEditing)} units={units} inputTypes={inputTypes} />}
 
             <h3 className="text-2xl font-semibold text-emerald-300 mb-4">Insumos Existentes</h3>
+
+            {/* **NUEVO**: Controles de Búsqueda y Filtro */}
+            <div className="flex flex-col md:flex-row gap-4 mb-6 p-4 bg-gray-700 rounded-lg">
+                <input
+                    type="text"
+                    placeholder="Buscar por nombre o componente..."
+                    className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 bg-gray-600 text-white focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                />
+                <select
+                    className="shadow appearance-none border rounded-md w-full md:w-1/3 py-2 px-3 text-gray-800 bg-gray-600 text-white focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                    value={typeFilter}
+                    onChange={(e) => setTypeFilter(e.target.value)}
+                >
+                    <option value="">Todos los Tipos</option>
+                    {inputTypes.map(type => (
+                        <option key={type.id} value={type.id}>{type.name}</option>
+                    ))}
+                </select>
+            </div>
+            
             <div className="overflow-x-auto rounded-lg shadow-md">
                 <table className="min-w-full leading-normal">
                     <thead><tr className="bg-gray-700 border-b border-gray-600"><th className="px-5 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">Nombre</th><th className="px-5 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">Tipo</th><th className="px-5 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">Unidad</th><th className="px-5 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">Precio</th><th className="px-5 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">Componentes</th><th className="px-5 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">Acciones</th></tr></thead>
-                    <tbody>
-                        {inputs.map((input) => (
-                            <tr key={input.id} className="hover:bg-gray-700">
-                                <td className="px-5 py-5 border-b border-gray-600 bg-gray-800 text-sm"><p className="text-gray-100">{input.name}</p></td>
-                                <td className="px-5 py-5 border-b border-gray-600 bg-gray-800 text-sm"><p className="text-gray-100">{input.inputTypeName}</p></td>
-                                <td className="px-5 py-5 border-b border-gray-600 bg-gray-800 text-sm"><p className="text-gray-100">{input.unitAbbreviation}</p></td>
-                                <td className="px-5 py-5 border-b border-gray-600 bg-gray-800 text-sm"><p className="text-gray-100">${input.price ? input.price.toFixed(2) : '0.00'}</p></td>
-                                <td className="px-5 py-5 border-b border-gray-600 bg-gray-800 text-sm">
-                                    {input.activeComponents && input.activeComponents.length > 0 ? (
-                                      <ul className="list-disc list-inside text-gray-100 text-xs">
-                                          {input.activeComponents.map((c, i) => <li key={i}>{c.name}: {c.percentage}%</li>)}
-                                      </ul>
-                                    ) : ( <p className="text-gray-400 text-xs">N/A</p> )}
-                                </td>
-                                <td className="px-5 py-5 border-b border-gray-600 bg-gray-800 text-sm">
-                                    <div className="flex gap-2">
-                                        <button onClick={() => handleEditInput(input)} className="bg-yellow-500 text-white font-bold py-1 px-3 rounded-full text-xs">Editar</button>
-                                        <button onClick={() => handleArchiveInput(input.id)} className="bg-red-500 text-white font-bold py-1 px-3 rounded-full text-xs">Archivar</button>
-                                    </div>
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
+                    {/* **NUEVO**: Lógica de renderizado para Agrupación o Filtrado simple */}
+                    {groupedInputs && !typeFilter ? (
+                        <>
+                            {Object.entries(groupedInputs).map(([typeName, groupInputs]) => (
+                                <tbody key={typeName}>
+                                    <tr className="bg-gray-700">
+                                        <td colSpan="6" className="px-5 py-2 text-left text-lg font-semibold text-emerald-300">
+                                            {typeName}
+                                        </td>
+                                    </tr>
+                                    {groupInputs.map(input => renderTableRow(input))}
+                                </tbody>
+                            ))}
+                        </>
+                    ) : (
+                        <tbody>
+                            {filteredInputs.map(input => renderTableRow(input))}
+                        </tbody>
+                    )}
                 </table>
+                 {filteredInputs.length === 0 && (
+                    <div className="text-center py-8 text-gray-400">
+                        <p>No se encontraron insumos que coincidan con los filtros.</p>
+                    </div>
+                )}
             </div>
         </div>
     );
