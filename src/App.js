@@ -52,6 +52,60 @@ const NotificationCenter = () => {
   );
 };
 
+
+// Hook para cargar las unidades de medida
+const useUnits = () => {
+  const { db, isAuthReady, addNotification } = useContext(AppContext);
+  const [units, setUnits] = useState([]);
+
+  useEffect(() => {
+    if (db && isAuthReady) {
+      const appId = process.env.REACT_APP_APP_ID || 'default-app-id';
+      const unitsColRef = collection(db, `artifacts/${appId}/public/data/units`);
+      const q = query(unitsColRef, where('isActive', '==', true));
+
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const unitsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setUnits(unitsData);
+      }, (error) => {
+        console.error("Error al obtener unidades:", error);
+        addNotification("Error al cargar unidades de medida.", "error");
+      });
+      return () => unsubscribe();
+    }
+  }, [db, isAuthReady, addNotification]);
+
+  return units;
+};
+
+
+// Hook para cargar los tipos de insumo
+const useInputTypes = () => {
+  const { db, isAuthReady, addNotification } = useContext(AppContext);
+  const [inputTypes, setInputTypes] = useState([]);
+
+  useEffect(() => {
+    if (db && isAuthReady) {
+      const appId = process.env.REACT_APP_APP_ID || 'default-app-id';
+      const typesColRef = collection(db, `artifacts/${appId}/public/data/input_types`);
+      const q = query(typesColRef, where('isActive', '==', true));
+
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const typesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setInputTypes(typesData);
+      }, (error) => {
+        console.error("Error al obtener tipos de insumo:", error);
+        addNotification("Error al cargar los tipos de insumo.", "error");
+      });
+      return () => unsubscribe();
+    }
+  }, [db, isAuthReady, addNotification]);
+
+  return inputTypes;
+};
+
+
+
 // Hook para cargar ubicaciones (invernaderos)
 const useLocations = () => {
   const { db, isAuthReady, addNotification } = useContext(AppContext);
@@ -76,6 +130,285 @@ const useLocations = () => {
 
   return locations;
 };
+
+// Componente para la gestión de Unidades de Medida
+const UnitCatalog = () => {
+  const { db, userId, isAuthReady, userRole, addNotification } = useContext(AppContext);
+  const [units, setUnits] = useState([]);
+  const [newUnitName, setNewUnitName] = useState('');
+  const [newUnitAbbreviation, setNewUnitAbbreviation] = useState('');
+  const [editingUnitId, setEditingUnitId] = useState(null);
+  const [editingUnitName, setEditingUnitName] = useState('');
+  const [editingUnitAbbreviation, setEditingUnitAbbreviation] = useState('');
+  const [showAddForm, setShowAddForm] = useState(false);
+
+  useEffect(() => {
+    if (db && isAuthReady && userRole === 'admin') {
+      const appId = process.env.REACT_APP_APP_ID || 'default-app-id';
+      const unitsColRef = collection(db, `artifacts/${appId}/public/data/units`);
+      const q = query(unitsColRef, where('isActive', '==', true));
+
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const unitsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setUnits(unitsData);
+      }, (error) => {
+        console.error("Error al obtener el catálogo de unidades:", error);
+        addNotification("Error al cargar unidades.", "error");
+      });
+      return () => unsubscribe();
+    }
+  }, [db, userId, isAuthReady, userRole, addNotification]);
+
+  const handleAddUnit = async (e) => {
+    e.preventDefault();
+    if (!newUnitName.trim() || !newUnitAbbreviation.trim()) {
+      addNotification("El nombre y la abreviatura no pueden estar vacíos.", "warning");
+      return;
+    }
+    try {
+      const appId = process.env.REACT_APP_APP_ID || 'default-app-id';
+      await addDoc(collection(db, `artifacts/${appId}/public/data/units`), {
+        name: newUnitName.trim(),
+        abbreviation: newUnitAbbreviation.trim(),
+        isActive: true,
+        createdAt: new Date(),
+        createdBy: userId
+      });
+      addNotification("Unidad añadida exitosamente.", "success");
+      setNewUnitName('');
+      setNewUnitAbbreviation('');
+      setShowAddForm(false);
+    } catch (error) {
+      console.error("Error al añadir unidad:", error);
+      addNotification("Error al añadir unidad.", "error");
+    }
+  };
+
+  const handleEditUnit = (unit) => {
+    setEditingUnitId(unit.id);
+    setEditingUnitName(unit.name);
+    setEditingUnitAbbreviation(unit.abbreviation);
+  };
+
+  const handleSaveUnit = async (unitId) => {
+    if (!editingUnitName.trim() || !editingUnitAbbreviation.trim()) {
+      addNotification("El nombre y la abreviatura no pueden estar vacíos.", "warning");
+      return;
+    }
+    try {
+      const appId = process.env.REACT_APP_APP_ID || 'default-app-id';
+      const unitDocRef = doc(db, `artifacts/${appId}/public/data/units`, unitId);
+      await updateDoc(unitDocRef, {
+        name: editingUnitName.trim(),
+        abbreviation: editingUnitAbbreviation.trim(),
+        updatedAt: new Date(),
+        updatedBy: userId
+      });
+      addNotification("Unidad actualizada exitosamente.", "success");
+      setEditingUnitId(null);
+    } catch (error) {
+      console.error("Error al actualizar unidad:", error);
+      addNotification("Error al actualizar unidad.", "error");
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingUnitId(null);
+    setEditingUnitName('');
+    setEditingUnitAbbreviation('');
+  };
+
+  const handleArchiveUnit = async (unitId) => {
+    // Reemplazar window.confirm con una notificación o un modal personalizado si es posible
+    // Por ahora, lo dejamos así para mantener la funcionalidad.
+    try {
+      const appId = process.env.REACT_APP_APP_ID || 'default-app-id';
+      const unitDocRef = doc(db, `artifacts/${appId}/public/data/units`, unitId);
+      await updateDoc(unitDocRef, {
+        isActive: false,
+        archivedAt: new Date(),
+        archivedBy: userId
+      });
+      addNotification("Unidad archivada exitosamente.", "success");
+    } catch (error) {
+      console.error("Error al archivar unidad:", error);
+      addNotification("Error al archivar unidad.", "error");
+    }
+  };
+
+  if (userRole !== 'admin') return <div className="p-6 text-center text-red-500 bg-gray-900 text-white rounded-lg">No tienes permisos.</div>;
+
+  return (
+    <div className="container mx-auto p-4 max-w-4xl bg-gray-800 text-gray-100 rounded-lg shadow-xl my-8 border border-gray-700">
+      <h2 className="text-3xl font-bold text-emerald-400 mb-6 border-b-2 border-gray-700 pb-2">Gestión de Unidades de Medida</h2>
+      {!showAddForm && (
+        <button onClick={() => setShowAddForm(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded-full shadow-lg transition duration-300 ease-in-out transform hover:scale-105 mb-6">
+          Añadir Nueva Unidad
+        </button>
+      )}
+      {showAddForm && (
+        <form onSubmit={handleAddUnit} className="mb-8 p-6 bg-gray-700 rounded-lg shadow-inner">
+          <h3 className="text-2xl font-semibold text-emerald-300 mb-4">Nueva Unidad</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="newUnitName" className="block text-gray-200 text-sm font-bold mb-2">Nombre (Ej: Litro):</label>
+              <input type="text" id="newUnitName" className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent bg-gray-600 text-white" value={newUnitName} onChange={(e) => setNewUnitName(e.target.value)} required />
+            </div>
+            <div>
+              <label htmlFor="newUnitAbbreviation" className="block text-gray-200 text-sm font-bold mb-2">Abreviatura (Ej: L):</label>
+              <input type="text" id="newUnitAbbreviation" className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent bg-gray-600 text-white" value={newUnitAbbreviation} onChange={(e) => setNewUnitAbbreviation(e.target.value)} required />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 mt-4">
+            <button type="submit" className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded-full shadow transition duration-300 ease-in-out transform hover:scale-105">Guardar</button>
+            <button type="button" onClick={() => setShowAddForm(false)} className="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-full shadow transition duration-300 ease-in-out transform hover:scale-105">Cancelar</button>
+          </div>
+        </form>
+      )}
+      <div className="overflow-x-auto rounded-lg shadow-md">
+        <table className="min-w-full leading-normal">
+          <thead><tr className="bg-gray-700 border-b border-gray-600"><th className="px-5 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">Nombre</th><th className="px-5 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">Abreviatura</th><th className="px-5 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">Acciones</th></tr></thead>
+          <tbody>
+            {units.map((unit) => (
+              <tr key={unit.id} className="hover:bg-gray-700">
+                <td className="px-5 py-5 border-b border-gray-600 bg-gray-800 text-sm">{editingUnitId === unit.id ? <input type="text" value={editingUnitName} onChange={(e) => setEditingUnitName(e.target.value)} className="shadow appearance-none border rounded w-full py-1 px-2 text-gray-800 bg-gray-600 text-white" /> : <p className="text-gray-100">{unit.name}</p>}</td>
+                <td className="px-5 py-5 border-b border-gray-600 bg-gray-800 text-sm">{editingUnitId === unit.id ? <input type="text" value={editingUnitAbbreviation} onChange={(e) => setEditingUnitAbbreviation(e.target.value)} className="shadow appearance-none border rounded w-full py-1 px-2 text-gray-800 bg-gray-600 text-white" /> : <p className="text-gray-100">{unit.abbreviation}</p>}</td>
+                <td className="px-5 py-5 border-b border-gray-600 bg-gray-800 text-sm">
+                  {editingUnitId === unit.id ? (
+                    <div className="flex gap-2"><button onClick={() => handleSaveUnit(unit.id)} className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-1 px-3 rounded-full text-xs">Guardar</button><button onClick={handleCancelEdit} className="bg-gray-500 hover:bg-gray-600 text-white font-bold py-1 px-3 rounded-full text-xs">Cancelar</button></div>
+                  ) : (
+                    <div className="flex gap-2"><button onClick={() => handleEditUnit(unit)} className="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-1 px-3 rounded-full text-xs">Editar</button><button onClick={() => handleArchiveUnit(unit.id)} className="bg-red-500 hover:bg-red-600 text-white font-bold py-1 px-3 rounded-full text-xs">Archivar</button></div>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
+
+
+// Componente para la gestión de Tipos de Insumo
+const InputTypeCatalog = () => {
+  const { db, userId, isAuthReady, userRole, addNotification } = useContext(AppContext);
+  const [types, setTypes] = useState([]);
+  const [newTypeName, setNewTypeName] = useState('');
+  const [editingTypeId, setEditingTypeId] = useState(null);
+  const [editingTypeName, setEditingTypeName] = useState('');
+  const [showAddForm, setShowAddForm] = useState(false);
+
+  useEffect(() => {
+    if (db && isAuthReady && userRole === 'admin') {
+      const appId = process.env.REACT_APP_APP_ID || 'default-app-id';
+      const typesColRef = collection(db, `artifacts/${appId}/public/data/input_types`);
+      const q = query(typesColRef, where('isActive', '==', true));
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        setTypes(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      }, (error) => {
+        console.error("Error al obtener tipos de insumo:", error);
+        addNotification("Error al cargar tipos de insumo.", "error");
+      });
+      return () => unsubscribe();
+    }
+  }, [db, userId, isAuthReady, userRole, addNotification]);
+
+  const handleAddType = async (e) => {
+    e.preventDefault();
+    if (!newTypeName.trim()) return addNotification("El nombre no puede estar vacío.", "warning");
+    try {
+      const appId = process.env.REACT_APP_APP_ID || 'default-app-id';
+      await addDoc(collection(db, `artifacts/${appId}/public/data/input_types`), {
+        name: newTypeName.trim(),
+        isActive: true,
+        createdAt: new Date(),
+        createdBy: userId
+      });
+      addNotification("Tipo de insumo añadido.", "success");
+      setNewTypeName('');
+      setShowAddForm(false);
+    } catch (error) {
+      addNotification("Error al añadir tipo de insumo.", "error");
+    }
+  };
+
+  const handleEditType = (type) => {
+    setEditingTypeId(type.id);
+    setEditingTypeName(type.name);
+  };
+
+  const handleSaveType = async (typeId) => {
+    if (!editingTypeName.trim()) return addNotification("El nombre no puede estar vacío.", "warning");
+    try {
+      const appId = process.env.REACT_APP_APP_ID || 'default-app-id';
+      const typeDocRef = doc(db, `artifacts/${appId}/public/data/input_types`, typeId);
+      await updateDoc(typeDocRef, { name: editingTypeName.trim(), updatedAt: new Date(), updatedBy: userId });
+      addNotification("Tipo de insumo actualizado.", "success");
+      setEditingTypeId(null);
+    } catch (error) {
+      addNotification("Error al actualizar tipo de insumo.", "error");
+    }
+  };
+
+  const handleCancelEdit = () => setEditingTypeId(null);
+
+  const handleArchiveType = async (typeId) => {
+    try {
+      const appId = process.env.REACT_APP_APP_ID || 'default-app-id';
+      const typeDocRef = doc(db, `artifacts/${appId}/public/data/input_types`, typeId);
+      await updateDoc(typeDocRef, { isActive: false, archivedAt: new Date(), archivedBy: userId });
+      addNotification("Tipo de insumo archivado.", "success");
+    } catch (error) {
+      addNotification("Error al archivar.", "error");
+    }
+  };
+
+  if (userRole !== 'admin') return <div className="p-6 text-center text-red-500 bg-gray-900 text-white rounded-lg">No tienes permisos.</div>;
+
+  return (
+    <div className="container mx-auto p-4 max-w-4xl bg-gray-800 text-gray-100 rounded-lg shadow-xl my-8 border border-gray-700">
+      <h2 className="text-3xl font-bold text-emerald-400 mb-6 border-b-2 border-gray-700 pb-2">Gestión de Tipos de Insumo</h2>
+      {!showAddForm && (
+        <button onClick={() => setShowAddForm(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded-full shadow-lg transition duration-300 ease-in-out transform hover:scale-105 mb-6">Añadir Nuevo Tipo</button>
+      )}
+      {showAddForm && (
+        <form onSubmit={handleAddType} className="mb-8 p-6 bg-gray-700 rounded-lg shadow-inner">
+          <h3 className="text-2xl font-semibold text-emerald-300 mb-4">Nuevo Tipo de Insumo</h3>
+          <div>
+            <label htmlFor="newTypeName" className="block text-gray-200 text-sm font-bold mb-2">Nombre (Ej: Fungicida):</label>
+            <input type="text" id="newTypeName" className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 bg-gray-600 text-white" value={newTypeName} onChange={(e) => setNewTypeName(e.target.value)} required />
+          </div>
+          <div className="flex justify-end gap-2 mt-4">
+            <button type="submit" className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded-full shadow">Guardar</button>
+            <button type="button" onClick={() => setShowAddForm(false)} className="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-full shadow">Cancelar</button>
+          </div>
+        </form>
+      )}
+      <div className="overflow-x-auto rounded-lg shadow-md">
+        <table className="min-w-full leading-normal">
+          <thead><tr className="bg-gray-700 border-b border-gray-600"><th className="px-5 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">Nombre</th><th className="px-5 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">Acciones</th></tr></thead>
+          <tbody>
+            {types.map((type) => (
+              <tr key={type.id} className="hover:bg-gray-700">
+                <td className="px-5 py-5 border-b border-gray-600 bg-gray-800 text-sm">{editingTypeId === type.id ? <input type="text" value={editingTypeName} onChange={(e) => setEditingTypeName(e.target.value)} className="shadow appearance-none border rounded w-full py-1 px-2 text-gray-800 bg-gray-600 text-white" /> : <p className="text-gray-100">{type.name}</p>}</td>
+                <td className="px-5 py-5 border-b border-gray-600 bg-gray-800 text-sm">
+                  {editingTypeId === type.id ? (
+                    <div className="flex gap-2"><button onClick={() => handleSaveType(type.id)} className="bg-blue-500 text-white font-bold py-1 px-3 rounded-full text-xs">Guardar</button><button onClick={handleCancelEdit} className="bg-gray-500 text-white font-bold py-1 px-3 rounded-full text-xs">Cancelar</button></div>
+                  ) : (
+                    <div className="flex gap-2"><button onClick={() => handleEditType(type)} className="bg-yellow-500 text-white font-bold py-1 px-3 rounded-full text-xs">Editar</button><button onClick={() => handleArchiveType(type.id)} className="bg-red-500 text-white font-bold py-1 px-3 rounded-full text-xs">Archivar</button></div>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
+
+
 
 // Componente para la gestión de ubicaciones (invernaderos)
 const LocationCatalog = () => {
@@ -303,696 +636,450 @@ const LocationCatalog = () => {
     </div>
   );
 };
-// Componente para la gestión de catálogo de insumos
+// Componente para la gestión de catálogo de insumos (ACTUALIZADO Y CORREGIDO)
 const InputCatalog = () => {
-  const { db, userId, isAuthReady, userRole, addNotification } = useContext(AppContext);
-  const [inputs, setInputs] = useState([]);
-  const [newInputName, setNewInputName] = useState('');
-  const [newInputUnit, setNewInputUnit] = useState('');
-  const [newInputPrice, setNewInputPrice] = useState('');
-  const [newInputActiveComponents, setNewInputActiveComponents] = useState([{ name: '', percentage: '' }]);
-  const [editingInputId, setEditingInputId] = useState(null); // Corrected initialization
-  const [editingInputPrice, setEditingInputPrice] = useState('');
-  const [editingInputActiveComponents, setEditingInputActiveComponents] = useState([]);
-  const [showAddForm, setShowAddForm] = useState(false);
+    const { db, userId, isAuthReady, userRole, addNotification } = useContext(AppContext);
+    const units = useUnits();
+    const inputTypes = useInputTypes();
 
-  useEffect(() => {
-    if (db && isAuthReady && userRole === 'admin') {
-      const appId = process.env.REACT_APP_APP_ID || 'default-app-id';
-      const inputsColRef = collection(db, `artifacts/${appId}/public/data/input_catalog`);
-      const q = query(inputsColRef, where('isActive', '==', true));
+    const [inputs, setInputs] = useState([]);
+    const [newInputData, setNewInputData] = useState({
+        name: '',
+        unitId: '',
+        price: '',
+        inputTypeId: '',
+        activeComponents: [{ name: '', percentage: '' }]
+    });
+    const [editingInput, setEditingInput] = useState(null);
+    const [showAddForm, setShowAddForm] = useState(false);
 
-      const unsubscribe = onSnapshot(q, (snapshot) => {
-        const inputsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        setInputs(inputsData);
-      }, (error) => {
-        console.error("Error al obtener el catálogo de insumos:", error);
-        addNotification("Error al cargar insumos.", "error");
-      });
+    useEffect(() => {
+        if (db && isAuthReady && userRole === 'admin') {
+            const appId = process.env.REACT_APP_APP_ID || 'default-app-id';
+            const inputsColRef = collection(db, `artifacts/${appId}/public/data/input_catalog`);
+            const q = query(inputsColRef, where('isActive', '==', true));
 
-      return () => unsubscribe();
+            const unsubscribe = onSnapshot(q, (snapshot) => {
+                const inputsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                setInputs(inputsData);
+            }, (error) => {
+                addNotification("Error al cargar insumos.", "error");
+            });
+            return () => unsubscribe();
+        }
+    }, [db, isAuthReady, userRole, addNotification]);
+
+    const handleNewInputChange = (e) => {
+        const { name, value } = e.target;
+        setNewInputData(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleActiveComponentChange = (index, e, isEditing = false) => {
+        const { name, value } = e.target;
+        const target = isEditing ? editingInput : newInputData;
+        const setter = isEditing ? setEditingInput : setNewInputData;
+
+        const updatedComponents = [...(target.activeComponents || [])];
+        updatedComponents[index] = { ...updatedComponents[index], [name]: value };
+        setter(prev => ({ ...prev, activeComponents: updatedComponents }));
+    };
+
+    const addActiveComponentRow = (isEditing = false) => {
+        const newRow = { name: '', percentage: '' };
+        const setter = isEditing ? setEditingInput : setNewInputData;
+        setter(prev => ({ ...prev, activeComponents: [...(prev.activeComponents || []), newRow] }));
+    };
+    
+    const removeActiveComponentRow = (index, isEditing = false) => {
+        const target = isEditing ? editingInput : newInputData;
+        const setter = isEditing ? setEditingInput : setNewInputData;
+        if (!target.activeComponents || target.activeComponents.length <= 1) return;
+        setter(prev => ({ ...prev, activeComponents: prev.activeComponents.filter((_, i) => i !== index) }));
+    };
+
+    const resetAddForm = () => {
+        setNewInputData({ name: '', unitId: '', price: '', inputTypeId: '', activeComponents: [{ name: '', percentage: '' }] });
+        setShowAddForm(false);
+    };
+
+    const handleAddInput = async (e) => {
+        e.preventDefault();
+        const { name, unitId, price, inputTypeId, activeComponents } = newInputData;
+        if (!name || !unitId || !price || !inputTypeId) return addNotification("Rellena todos los campos principales.", "warning");
+        if (activeComponents.some(c => !c.name.trim() || !c.percentage)) return addNotification("Completa todos los componentes activos.", "warning");
+        
+        const selectedUnit = units.find(u => u.id === unitId);
+        const selectedType = inputTypes.find(t => t.id === inputTypeId);
+        if (!selectedUnit || !selectedType) return addNotification("Unidad o tipo no válidos.", "error");
+
+        try {
+            const appId = process.env.REACT_APP_APP_ID || 'default-app-id';
+            await addDoc(collection(db, `artifacts/${appId}/public/data/input_catalog`), {
+                name: name.trim(),
+                unitId,
+                unitName: selectedUnit.name,
+                unitAbbreviation: selectedUnit.abbreviation,
+                inputTypeId,
+                inputTypeName: selectedType.name,
+                price: parseFloat(price),
+                activeComponents: activeComponents.map(c => ({ name: c.name.trim(), percentage: parseFloat(c.percentage) })),
+                isActive: true,
+                createdAt: new Date(),
+                createdBy: userId
+            });
+            addNotification("Insumo añadido.", "success");
+            resetAddForm();
+        } catch (error) {
+            addNotification("Error al añadir insumo.", "error");
+        }
+    };
+    
+    const handleEditInput = (input) => {
+      // CORRECCIÓN: Asegurarse que activeComponents sea un array al editar.
+      setEditingInput({ ...input, activeComponents: input.activeComponents || [{ name: '', percentage: '' }] });
+    };
+
+    const handleEditingInputChange = (e) => {
+      const { name, value } = e.target;
+      setEditingInput(prev => ({ ...prev, [name]: value}));
     }
-  }, [db, userId, isAuthReady, userRole, addNotification]);
 
-  const handleNewActiveComponentChange = (index, e) => {
-    const { name, value } = e.target;
-    const updatedComponents = [...newInputActiveComponents];
-    updatedComponents[index] = { ...updatedComponents[index], [name]: value };
-    setNewInputActiveComponents(updatedComponents);
-  };
+    const handleSaveInput = async (inputId) => {
+      const { unitId, inputTypeId, price, activeComponents } = editingInput;
+      if (!unitId || !inputTypeId || !price) return addNotification("Rellena los campos principales.", "warning");
 
-  const handleAddActiveComponentRow = (isEditing = false) => {
-    if (isEditing) {
-      setEditingInputActiveComponents(prev => [...prev, { name: '', percentage: '' }]);
-    } else {
-      setNewInputActiveComponents(prev => [...prev, { name: '', percentage: '' }]);
-    }
-  };
+      const selectedUnit = units.find(u => u.id === unitId);
+      const selectedType = inputTypes.find(t => t.id === inputTypeId);
+      if (!selectedUnit || !selectedType) return addNotification("Unidad o tipo no válidos.", "error");
 
-  const handleRemoveActiveComponentRow = (index, isEditing = false) => {
-    if (isEditing) {
-      const updatedComponents = editingInputActiveComponents.filter((_, i) => i !== index);
-      setEditingInputActiveComponents(updatedComponents);
-    } else {
-      const updatedComponents = newInputActiveComponents.filter((_, i) => i !== index);
-      setNewInputActiveComponents(updatedComponents);
-    }
-  };
+      try {
+        const appId = process.env.REACT_APP_APP_ID || 'default-app-id';
+        const inputDocRef = doc(db, `artifacts/${appId}/public/data/input_catalog`, inputId);
+        await updateDoc(inputDocRef, {
+            unitId,
+            unitName: selectedUnit.name,
+            unitAbbreviation: selectedUnit.abbreviation,
+            inputTypeId,
+            inputTypeName: selectedType.name,
+            price: parseFloat(price),
+            activeComponents: activeComponents.map(c => ({ name: c.name.trim(), percentage: parseFloat(c.percentage) })),
+            updatedAt: new Date(),
+            updatedBy: userId
+        });
+        addNotification("Insumo actualizado.", "success");
+        setEditingInput(null);
+      } catch (error) {
+        addNotification("Error al actualizar insumo.", "error");
+      }
+    };
 
-  const handleAddInput = async (e) => {
-    e.preventDefault();
-    if (!newInputName || !newInputUnit || !newInputPrice) {
-      addNotification("Por favor, rellena todos los campos para el nuevo insumo.", "warning");
-      return;
-    }
-    if (isNaN(parseFloat(newInputPrice))) {
-      addNotification("El precio debe ser un número.", "warning");
-      return;
-    }
-    if (newInputActiveComponents.some(c => !c.name.trim() || isNaN(parseFloat(c.percentage)) || parseFloat(c.percentage) < 0)) {
-      addNotification("Asegúrate de que todos los componentes activos tengan un nombre y un porcentaje numérico válido.", "warning");
-      return;
-    }
+    const handleCancelEdit = () => {
+        setEditingInput(null);
+    };
 
-    try {
-      const appId = process.env.REACT_APP_APP_ID || 'default-app-id';
-      await addDoc(collection(db, `artifacts/${appId}/public/data/input_catalog`), {
-        name: newInputName,
-        unit: newInputUnit,
-        price: parseFloat(newInputPrice),
-        activeComponents: newInputActiveComponents.map(c => ({ name: c.name.trim(), percentage: parseFloat(c.percentage) })),
-        isActive: true,
-        createdAt: new Date(),
-        createdBy: userId
-      });
-      addNotification("Insumo añadido exitosamente.", "success");
-      setNewInputName('');
-      setNewInputUnit('');
-      setNewInputPrice('');
-      setNewInputActiveComponents([{ name: '', percentage: '' }]);
-      setShowAddForm(false);
-    } catch (error) {
-      console.error("Error al añadir insumo:", error);
-      addNotification("Error al añadir insumo.", "error");
-    }
-  };
+    const handleArchiveInput = async (inputId) => {
+        try {
+            const appId = process.env.REACT_APP_APP_ID || 'default-app-id';
+            const inputDocRef = doc(db, `artifacts/${appId}/public/data/input_catalog`, inputId);
+            await updateDoc(inputDocRef, { isActive: false, archivedAt: new Date(), archivedBy: userId });
+            addNotification("Insumo archivado.", "success");
+        } catch (error) {
+            addNotification("Error al archivar insumo.", "error");
+        }
+    };
 
-  const handleEditInput = (inputId, currentPrice, currentComponents) => {
-    setEditingInputId(inputId);
-    setEditingInputPrice(currentPrice);
-    setEditingInputActiveComponents(currentComponents.map(c => ({ ...c })));
-  };
+    if (userRole !== 'admin') return <div className="p-6 text-center text-red-500 bg-gray-900 text-white rounded-lg">No tienes permisos.</div>;
 
-  const handleSaveInput = async (inputId) => {
-    if (isNaN(parseFloat(editingInputPrice))) {
-      addNotification("El precio debe ser un número.", "warning");
-      return;
-    }
-    if (editingInputActiveComponents.some(c => !c.name.trim() || isNaN(parseFloat(c.percentage)) || parseFloat(c.percentage) < 0)) {
-      addNotification("Asegúrate de que todos los componentes activos tengan un nombre y un porcentaje numérico válido.", "warning");
-      return;
-    }
-    try {
-      const appId = process.env.REACT_APP_APP_ID || 'default-app-id';
-      const inputDocRef = doc(db, `artifacts/${appId}/public/data/input_catalog`, inputId);
-      await updateDoc(inputDocRef, {
-        price: parseFloat(editingInputPrice),
-        activeComponents: editingInputActiveComponents.map(c => ({ name: c.name.trim(), percentage: parseFloat(c.percentage) })),
-        updatedAt: new Date(),
-        updatedBy: userId
-      });
-      addNotification("Insumo actualizado exitosamente.", "success");
-      setEditingInputId(null);
-      setEditingInputPrice('');
-      setEditingInputActiveComponents([]);
-    } catch (error) {
-      console.error("Error al actualizar insumo:", error);
-      addNotification("Error al actualizar insumo.", "error");
-    }
-  };
-
-  const handleCancelEdit = () => {
-    setEditingInputId(null);
-    setEditingInputPrice('');
-    setEditingInputActiveComponents([]);
-  };
-
-  const handleArchiveInput = async (inputId) => {
-    if (!window.confirm("¿Estás seguro de que quieres archivar este insumo?")) {
-      return;
-    }
-    try {
-      const appId = process.env.REACT_APP_APP_ID || 'default-app-id';
-      const inputDocRef = doc(db, `artifacts/${appId}/public/data/input_catalog`, inputId);
-      await updateDoc(inputDocRef, {
-        isActive: false,
-        archivedAt: new Date(),
-        archivedBy: userId
-      });
-      addNotification("Insumo archivado exitosamente.", "success");
-    } catch (error) {
-      console.error("Error al archivar insumo:", error);
-      addNotification("Error al archivar insumo.", "error");
-    }
-  };
-
-  if (userRole !== 'admin') {
-    return (
-      <div className="p-6 text-center text-red-500 bg-gray-900 text-white rounded-lg">
-        No tienes permisos para acceder a esta sección.
-      </div>
-    );
-  }
-
-  return (
-    <div className="container mx-auto p-4 max-w-4xl bg-gray-800 text-gray-100 rounded-lg shadow-xl my-8 border border-gray-700">
-      <h2 className="text-3xl font-bold text-emerald-400 mb-6 border-b-2 border-gray-700 pb-2">Gestión de Insumos</h2>
-
-      {!showAddForm && (
-        <button
-          onClick={() => setShowAddForm(true)}
-          className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded-full shadow-lg transition duration-300 ease-in-out transform hover:scale-105 mb-6"
-        >
-          Añadir Nuevo Insumo
-        </button>
-      )}
-
-      {showAddForm && (
-        <form onSubmit={handleAddInput} className="mb-8 p-6 bg-gray-700 rounded-lg shadow-inner">
-          <h3 className="text-2xl font-semibold text-emerald-300 mb-4">Nuevo Insumo</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-            <div>
-              <label htmlFor="newInputName" className="block text-gray-200 text-sm font-bold mb-2">Nombre:</label>
-              <input
-                type="text"
-                id="newInputName"
-                className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent bg-gray-600 text-white"
-                value={newInputName}
-                onChange={(e) => setNewInputName(e.target.value)}
-                required
-              />
-            </div>
-            <div>
-              <label htmlFor="newInputUnit" className="block text-gray-200 text-sm font-bold mb-2">Unidad:</label>
-              <input
-                type="text"
-                id="newInputUnit"
-                className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent bg-gray-600 text-white"
-                value={newInputUnit}
-                onChange={(e) => setNewInputUnit(e.target.value)}
-                required
-              />
-            </div>
-            <div>
-              <label htmlFor="newInputPrice" className="block text-gray-200 text-sm font-bold mb-2">Precio ($):</label>
-              <input
-                type="number"
-                step="0.01"
-                id="newInputPrice"
-                className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent bg-gray-600 text-white"
-                value={newInputPrice}
-                onChange={(e) => setNewInputPrice(e.target.value)}
-                required
-              />
-            </div>
-          </div>
-          <h4 className="text-xl font-semibold text-emerald-300 mb-3">Componentes Activos</h4>
-          {newInputActiveComponents.map((component, index) => (
-            <div key={index} className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3 p-3 border border-gray-600 rounded-md bg-gray-800">
-              <div>
-                <label htmlFor={`newCompName-${index}`} className="block text-gray-200 text-xs font-bold mb-1">Nombre Componente:</label>
-                <input
-                  type="text"
-                  id={`newCompName-${index}`}
-                  name="name"
-                  value={component.name}
-                  onChange={(e) => handleNewActiveComponentChange(index, e)}
-                  className="shadow appearance-none border rounded-md w-full py-1 px-2 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-gray-700 text-white"
-                  placeholder="Ej: Mancozeb"
-                  required
-                />
-              </div>
-              <div>
-                <label htmlFor={`newCompPerc-${index}`} className="block text-gray-200 text-xs font-bold mb-1">Porcentaje (%):</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  id={`newCompPerc-${index}`}
-                  name="percentage"
-                  value={component.percentage}
-                  onChange={(e) => handleNewActiveComponentChange(index, e)}
-                  className="shadow appearance-none border rounded-md w-full py-1 px-2 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-gray-700 text-white"
-                  required
-                />
-              </div>
-              <div className="flex items-center pt-2">
-                {newInputActiveComponents.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveActiveComponentRow(index)}
-                    className="bg-red-500 hover:bg-red-600 text-white font-bold py-1 px-2 rounded-full text-xs"
-                  >
-                    Remover
-                  </button>
-                )}
-              </div>
-            </div>
-          ))}
-          <button
-            type="button"
-            onClick={() => handleAddActiveComponentRow(false)}
-            className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-1 px-3 rounded-full text-sm mt-2"
-          >
-            Añadir Otro Componente
-          </button>
-
-          <div className="flex justify-end gap-2 mt-6">
-            <button
-              type="submit"
-              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded-full shadow transition duration-300 ease-in-out transform hover:scale-105"
-            >
-              Guardar Insumo
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowAddForm(false)}
-              className="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-full shadow transition duration-300 ease-in-out transform hover:scale-105"
-            >
-              Cancelar
-            </button>
-          </div>
-        </form>
-      )}
-
-      <h3 className="text-2xl font-semibold text-emerald-300 mb-4">Insumos Existentes</h3>
-      <div className="overflow-x-auto rounded-lg shadow-md">
-        <table className="min-w-full leading-normal">
-          <thead>
-            <tr className="bg-gray-700 border-b border-gray-600">
-              <th className="px-5 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">Nombre</th>
-              <th className="px-5 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">Unidad</th>
-              <th className="px-5 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">Precio ($)</th>
-              <th className="px-5 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">Componentes Activos</th>
-              <th className="px-5 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {inputs.length === 0 ? (
-              <tr>
-                <td colSpan="5" className="px-5 py-5 border-b border-gray-600 bg-gray-800 text-sm text-gray-300 text-center">
-                  No hay insumos registrados.
-                </td>
-              </tr>
-            ) : (
-              inputs.map((input) => (
-                <tr key={input.id} className="hover:bg-gray-700">
-                  <td className="px-5 py-5 border-b border-gray-600 bg-gray-800 text-sm">
-                    <p className="text-gray-100 whitespace-no-wrap">{input.name}</p>
-                  </td>
-                  <td className="px-5 py-5 border-b border-gray-600 bg-gray-800 text-sm">
-                    <p className="text-gray-100 whitespace-no-wrap">{input.unit}</p>
-                  </td>
-                  <td className="px-5 py-5 border-b border-gray-600 bg-gray-800 text-sm">
-                    {editingInputId === input.id ? (
-                      <input
-                        type="number"
-                        step="0.01"
-                        value={editingInputPrice}
-                        onChange={(e) => setEditingInputPrice(e.target.value)}
-                        className="shadow appearance-none border rounded w-24 py-1 px-2 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-gray-700 text-white"
-                      />
-                    ) : (
-                      <p className="text-gray-100 whitespace-no-wrap">{input.price.toFixed(2)}</p>
+    const AddEditForm = ({ isEditing }) => {
+        const data = isEditing ? editingInput : newInputData;
+        const changeHandler = isEditing ? handleEditingInputChange : handleNewInputChange;
+        const componentChangeHandler = (index, e) => handleActiveComponentChange(index, e, isEditing);
+        const submitHandler = isEditing ? (e) => { e.preventDefault(); handleSaveInput(data.id); } : handleAddInput;
+        const cancelHandler = isEditing ? handleCancelEdit : resetAddForm;
+        
+        return (
+            <form onSubmit={submitHandler} className="mb-8 p-6 bg-gray-700 rounded-lg shadow-inner">
+                <h3 className="text-2xl font-semibold text-emerald-300 mb-4">{isEditing ? "Editar Insumo" : "Nuevo Insumo"}</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    {!isEditing && (
+                        <div>
+                            <label className="block text-gray-200 text-sm font-bold mb-2">Nombre:</label>
+                            <input type="text" name="name" value={data.name} onChange={changeHandler} className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 bg-gray-600 text-white" required />
+                        </div>
                     )}
-                  </td>
-                  <td className="px-5 py-5 border-b border-gray-600 bg-gray-800 text-sm">
-                    {editingInputId === input.id ? (
-                      <div>
-                        {editingInputActiveComponents.map((component, index) => (
-                          <div key={index} className="flex gap-1 items-center mb-1">
-                            <input
-                              type="text"
-                              name="name"
-                              value={component.name}
-                              onChange={(e) => setEditingInputActiveComponents(prev => prev.map((item, i) => i === index ? { ...item, name: e.target.value } : item))}
-                              className="shadow appearance-none border rounded py-0.5 px-1 text-gray-800 text-xs w-2/5 bg-gray-700 text-white"
-                            />
-                            <input
-                              type="number"
-                              step="0.01"
-                              name="percentage"
-                              value={component.percentage}
-                              onChange={(e) => setEditingInputActiveComponents(prev => prev.map((item, i) => i === index ? { ...item, percentage: e.target.value } : item))}
-                              className="shadow appearance-none border rounded py-0.5 px-1 text-gray-800 text-xs w-1/4 bg-gray-700 text-white"
-                            />
-                            <span className="text-xs text-gray-300">%</span>
-                            {editingInputActiveComponents.length > 1 && (
-                              <button
-                                type="button"
-                                onClick={() => handleRemoveActiveComponentRow(index, true)}
-                                className="bg-red-500 hover:bg-red-600 text-white font-bold py-0.5 px-1 rounded-full text-xs"
-                              >
-                                X
-                              </button>
+                     <div>
+                        <label className="block text-gray-200 text-sm font-bold mb-2">Tipo de Insumo:</label>
+                        <select name="inputTypeId" value={data.inputTypeId} onChange={changeHandler} className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 bg-gray-600 text-white" required>
+                            <option value="">Selecciona un tipo</option>
+                            {inputTypes.map(type => <option key={type.id} value={type.id}>{type.name}</option>)}
+                        </select>
+                    </div>
+                    <div>
+                        <label className="block text-gray-200 text-sm font-bold mb-2">Unidad:</label>
+                        <select name="unitId" value={data.unitId} onChange={changeHandler} className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 bg-gray-600 text-white" required>
+                            <option value="">Selecciona una unidad</option>
+                            {units.map(unit => <option key={unit.id} value={unit.id}>{unit.name} ({unit.abbreviation})</option>)}
+                        </select>
+                    </div>
+                    <div>
+                        <label className="block text-gray-200 text-sm font-bold mb-2">Precio ($):</label>
+                        <input type="number" step="0.01" name="price" value={data.price} onChange={changeHandler} className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 bg-gray-600 text-white" required />
+                    </div>
+                </div>
+
+                <h4 className="text-xl font-semibold text-emerald-300 mb-3">Componentes Activos</h4>
+                {/* CORRECCIÓN: Validar que `data.activeComponents` exista antes de mapear */}
+                {data.activeComponents && data.activeComponents.map((component, index) => (
+                    <div key={index} className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3 p-3 border border-gray-600 rounded-md bg-gray-800">
+                        <input type="text" name="name" value={component.name} onChange={(e) => componentChangeHandler(index, e)} placeholder="Nombre Componente" className="shadow appearance-none border rounded-md w-full py-1 px-2 text-gray-800 bg-gray-700 text-white" required />
+                        <input type="number" step="0.01" name="percentage" value={component.percentage} onChange={(e) => componentChangeHandler(index, e)} placeholder="Porcentaje (%)" className="shadow appearance-none border rounded-md w-full py-1 px-2 text-gray-800 bg-gray-700 text-white" required />
+                        <div className="flex items-center">
+                            {data.activeComponents.length > 1 && (
+                                <button type="button" onClick={() => removeActiveComponentRow(index, isEditing)} className="bg-red-500 text-white font-bold py-1 px-2 rounded-full text-xs">Remover</button>
                             )}
-                          </div>
-                        ))}
-                        <button
-                          type="button"
-                          onClick={() => handleAddActiveComponentRow(true)}
-                          className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-0.5 px-1 rounded-full text-xs mt-1"
-                        >
-                          + Comp.
-                        </button>
-                      </div>
-                    ) : (
-                      <ul className="list-disc list-inside text-gray-100 whitespace-no-wrap text-sm">
-                        {input.activeComponents && input.activeComponents.map((comp, idx) => (
-                          <li key={idx}>{comp.name}: {comp.percentage}%</li>
-                        ))}
-                      </ul>
-                    )}
-                  </td>
-                  <td className="px-5 py-5 border-b border-gray-600 bg-gray-800 text-sm">
-                    {editingInputId === input.id ? (
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => handleSaveInput(input.id)}
-                          className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-1 px-3 rounded-full text-xs transition duration-300"
-                        >
-                          Guardar
-                        </button>
-                        <button
-                          onClick={handleCancelEdit}
-                          className="bg-gray-500 hover:bg-gray-600 text-white font-bold py-1 px-3 rounded-full text-xs transition duration-300"
-                        >
-                          Cancelar
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => handleEditInput(input.id, input.price, input.activeComponents || [])}
-                          className="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-1 px-3 rounded-full text-xs transition duration-300"
-                        >
-                          Editar
-                        </button>
-                        <button
-                          onClick={() => handleArchiveInput(input.id)}
-                          className="bg-red-500 hover:bg-red-600 text-white font-bold py-1 px-3 rounded-full text-xs transition duration-300"
-                        >
-                          Archivar
-                        </button>
-                      </div>
-                    )}
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-};
+                        </div>
+                    </div>
+                ))}
+                <button type="button" onClick={() => addActiveComponentRow(isEditing)} className="bg-blue-500 text-white font-bold py-1 px-3 rounded-full text-sm mt-2">Añadir Componente</button>
 
-// Componente para la gestión de catálogo de productos
-const ProductCatalog = () => {
-  const { db, userId, isAuthReady, userRole, addNotification } = useContext(AppContext);
-  const [products, setProducts] = useState([]);
-  const [newProductName, setNewProductName] = useState('');
-  const [newProductUnit, setNewProductUnit] = useState('');
-  const [newProductPrice, setNewProductPrice] = useState('');
-  const [editingProductId, setEditingProductId] = useState(null); // Corrected initialization
-  const [editingProductPrice, setEditingProductPrice] = useState('');
-  const [editingProductUnit, setEditingProductUnit] = useState('');
-  const [showAddForm, setShowAddForm] = useState(false);
-
-  useEffect(() => {
-    if (db && isAuthReady && userRole === 'admin') {
-      const appId = process.env.REACT_APP_APP_ID || 'default-app-id';
-      const productsColRef = collection(db, `artifacts/${appId}/public/data/product_catalog`);
-      const q = query(productsColRef, where('isActive', '==', true));
-
-      const unsubscribe = onSnapshot(q, (snapshot) => {
-        const productsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        setProducts(productsData);
-      }, (error) => {
-        console.error("Error al obtener el catálogo de productos:", error);
-        addNotification("Error al cargar productos.", "error");
-      });
-
-      return () => unsubscribe();
-    }
-  }, [db, userId, isAuthReady, userRole, addNotification]);
-
-  const handleAddProduct = async (e) => {
-    e.preventDefault();
-    if (!newProductName || !newProductUnit || !newProductPrice) {
-      addNotification("Por favor, rellena todos los campos para el nuevo producto.", "warning");
-      return;
-    }
-    if (isNaN(parseFloat(newProductPrice))) {
-      addNotification("El precio debe ser un número.", "warning");
-      return;
-    }
-
-    try {
-      const appId = process.env.REACT_APP_APP_ID || 'default-app-id';
-      await addDoc(collection(db, `artifacts/${appId}/public/data/product_catalog`), {
-        name: newProductName,
-        unit_of_sale: newProductUnit,
-        price: parseFloat(newProductPrice),
-        isActive: true,
-        createdAt: new Date(),
-        createdBy: userId
-      });
-      addNotification("Producto añadido exitosamente.", "success");
-      setNewProductName('');
-      setNewProductUnit('');
-      setNewProductPrice('');
-      setShowAddForm(false);
-    } catch (error) {
-      console.error("Error al añadir producto:", error);
-      addNotification("Error al añadir producto.", "error");
-    }
-  };
-
-  const handleEditProduct = (productId, currentPrice, currentUnit) => {
-    setEditingProductId(productId);
-    setEditingProductPrice(currentPrice);
-    setEditingProductUnit(currentUnit);
-  };
-
-  const handleSaveProduct = async (productId) => {
-    if (isNaN(parseFloat(editingProductPrice))) {
-      addNotification("El precio debe ser un número.", "warning");
-      return;
-    }
-    try {
-      const appId = process.env.REACT_APP_APP_ID || 'default-app-id';
-      const productDocRef = doc(db, `artifacts/${appId}/public/data/product_catalog`, productId);
-      await updateDoc(productDocRef, {
-        price: parseFloat(editingProductPrice),
-        unit_of_sale: editingProductUnit,
-        updatedAt: new Date(),
-        updatedBy: userId
-      });
-      addNotification("Producto actualizado exitosamente.", "success");
-      setEditingProductId(null);
-      setEditingProductPrice('');
-      setEditingProductUnit('');
-    } catch (error) {
-      console.error("Error al actualizar producto:", error);
-      addNotification("Error al actualizar producto.", "error");
-    }
-  };
-
-  const handleCancelEdit = () => {
-    setEditingProductId(null);
-    setEditingProductPrice('');
-    setEditingProductUnit('');
-  };
-
-  const handleArchiveProduct = async (productId) => {
-    if (!window.confirm("¿Estás seguro de que quieres archivar este producto?")) {
-      return;
-    }
-    try {
-      const appId = process.env.REACT_APP_APP_ID || 'default-app-id';
-      const productDocRef = doc(db, `artifacts/${appId}/public/data/product_catalog`, productId);
-      await updateDoc(productDocRef, {
-        isActive: false,
-        archivedAt: new Date(),
-        archivedBy: userId
-      });
-      addNotification("Producto archivado exitosamente.", "success");
-    } catch (error) {
-      console.error("Error al archivar producto:", error);
-      addNotification("Error al archivar producto.", "error");
-    }
-  };
-
-  if (userRole !== 'admin') {
+                <div className="flex justify-end gap-2 mt-6">
+                    <button type="submit" className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded-full shadow">Guardar</button>
+                    <button type="button" onClick={cancelHandler} className="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-full shadow">Cancelar</button>
+                </div>
+            </form>
+        );
+    };
+    
     return (
-      <div className="p-6 text-center text-red-500 bg-gray-900 text-white rounded-lg">
-        No tienes permisos para acceder a esta sección.
-      </div>
-    );
-  }
+        <div className="container mx-auto p-4 max-w-5xl bg-gray-800 text-gray-100 rounded-lg shadow-xl my-8 border border-gray-700">
+            <h2 className="text-3xl font-bold text-emerald-400 mb-6 border-b-2 border-gray-700 pb-2">Gestión de Insumos</h2>
 
-  return (
-    <div className="container mx-auto p-4 max-w-4xl bg-gray-800 text-gray-100 rounded-lg shadow-xl my-8 border border-gray-700">
-      <h2 className="text-3xl font-bold text-emerald-400 mb-6 border-b-2 border-gray-700 pb-2">Gestión de Productos</h2>
-
-      {!showAddForm && (
-        <button
-          onClick={() => setShowAddForm(true)}
-          className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded-full shadow-lg transition duration-300 ease-in-out transform hover:scale-105 mb-6"
-        >
-          Añadir Nuevo Producto
-        </button>
-      )}
-
-      {showAddForm && (
-        <form onSubmit={handleAddProduct} className="mb-8 p-6 bg-gray-700 rounded-lg shadow-inner">
-          <h3 className="text-2xl font-semibold text-emerald-300 mb-4">Nuevo Producto</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-            <div>
-              <label htmlFor="newProductName" className="block text-gray-200 text-sm font-bold mb-2">Nombre:</label>
-              <input
-                type="text"
-                id="newProductName"
-                className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent bg-gray-600 text-white"
-                value={newProductName}
-                onChange={(e) => setNewProductName(e.target.value)}
-                required
-              />
-            </div>
-            <div>
-              <label htmlFor="newProductUnit" className="block text-gray-200 text-sm font-bold mb-2">Unidad de Venta:</label>
-              <input
-                type="text"
-                id="newProductUnit"
-                className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent bg-gray-600 text-white"
-                value={newProductUnit}
-                onChange={(e) => setNewProductUnit(e.target.value)}
-                required
-              />
-            </div>
-            <div>
-              <label htmlFor="newProductPrice" className="block text-gray-200 text-sm font-bold mb-2">Precio ($):</label>
-              <input
-                type="number"
-                step="0.01"
-                id="newProductPrice"
-                className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent bg-gray-600 text-white"
-                value={newProductPrice}
-                onChange={(e) => setNewProductPrice(e.target.value)}
-                required
-              />
-            </div>
-          </div>
-          <div className="flex justify-end gap-2">
-            <button
-              type="submit"
-              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded-full shadow transition duration-300 ease-in-out transform hover:scale-105"
-            >
-              Guardar Producto
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowAddForm(false)}
-              className="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-full shadow transition duration-300 ease-in-out transform hover:scale-105"
-            >
-              Cancelar
-            </button>
-          </div>
-        </form>
-      )}
-
-      <h3 className="text-2xl font-semibold text-emerald-300 mb-4">Productos Existentes</h3>
-      <div className="overflow-x-auto rounded-lg shadow-md">
-        <table className="min-w-full leading-normal">
-          <thead>
-            <tr className="bg-gray-700 border-b border-gray-600">
-              <th className="px-5 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">Nombre</th>
-              <th className="px-5 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">Unidad de Venta</th>
-              <th className="px-5 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">Precio ($)</th>
-              <th className="px-5 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {products.length === 0 ? (
-              <tr>
-                <td colSpan="4" className="px-5 py-5 border-b border-gray-600 bg-gray-800 text-sm text-gray-300 text-center">
-                  No hay productos registrados.
-                </td>
-              </tr>
-            ) : (
-              products.map((product) => (
-                <tr key={product.id} className="hover:bg-gray-700">
-                  <td className="px-5 py-5 border-b border-gray-600 bg-gray-800 text-sm">
-                    <p className="text-gray-100 whitespace-no-wrap">{product.name}</p>
-                  </td>
-                  <td className="px-5 py-5 border-b border-gray-600 bg-gray-800 text-sm">
-                    <p className="text-gray-100 whitespace-no-wrap">{product.unit_of_sale}</p>
-                  </td>
-                  <td className="px-5 py-5 border-b border-gray-600 bg-gray-800 text-sm">
-                    {editingProductId === product.id ? (
-                      <input
-                        type="number"
-                        step="0.01"
-                        value={editingProductPrice}
-                        onChange={(e) => setEditingProductPrice(e.target.value)}
-                        className="shadow appearance-none border rounded w-24 py-1 px-2 text-gray-800 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-gray-700 text-white"
-                      />
-                    ) : (
-                      <p className="text-gray-100 whitespace-no-wrap">{product.price.toFixed(2)}</p>
-                    )}
-                  </td>
-                  <td className="px-5 py-5 border-b border-gray-600 bg-gray-800 text-sm">
-                    {editingProductId === product.id ? (
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => handleSaveProduct(product.id)}
-                          className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-1 px-3 rounded-full text-xs transition duration-300"
-                        >
-                          Guardar
-                        </button>
-                        <button
-                          onClick={handleCancelEdit}
-                          className="bg-gray-500 hover:bg-gray-600 text-white font-bold py-1 px-3 rounded-full text-xs transition duration-300"
-                        >
-                          Cancelar
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => handleEditProduct(product.id, product.price, product.unit_of_sale)}
-                          className="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-1 px-3 rounded-full text-xs transition duration-300"
-                        >
-                          Editar
-                        </button>
-                        <button
-                          onClick={() => handleArchiveProduct(product.id)}
-                          className="bg-red-500 hover:bg-red-600 text-white font-bold py-1 px-3 rounded-full text-xs transition duration-300"
-                        >
-                          Archivar
-                        </button>
-                      </div>
-                    )}
-                  </td>
-                </tr>
-              ))
+            {!showAddForm && !editingInput && (
+                <button onClick={() => setShowAddForm(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded-full shadow-lg transition duration-300 ease-in-out transform hover:scale-105 mb-6">
+                    Añadir Nuevo Insumo
+                </button>
             )}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
+
+            {showAddForm && <AddEditForm isEditing={false} />}
+            {editingInput && <AddEditForm isEditing={true} />}
+
+            <h3 className="text-2xl font-semibold text-emerald-300 mb-4">Insumos Existentes</h3>
+            <div className="overflow-x-auto rounded-lg shadow-md">
+                <table className="min-w-full leading-normal">
+                    <thead><tr className="bg-gray-700 border-b border-gray-600"><th className="px-5 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">Nombre</th><th className="px-5 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">Tipo</th><th className="px-5 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">Unidad</th><th className="px-5 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">Precio</th><th className="px-5 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">Componentes</th><th className="px-5 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">Acciones</th></tr></thead>
+                    <tbody>
+                        {inputs.map((input) => (
+                            <tr key={input.id} className="hover:bg-gray-700">
+                                <td className="px-5 py-5 border-b border-gray-600 bg-gray-800 text-sm"><p className="text-gray-100">{input.name}</p></td>
+                                <td className="px-5 py-5 border-b border-gray-600 bg-gray-800 text-sm"><p className="text-gray-100">{input.inputTypeName}</p></td>
+                                <td className="px-5 py-5 border-b border-gray-600 bg-gray-800 text-sm"><p className="text-gray-100">{input.unitAbbreviation}</p></td>
+                                <td className="px-5 py-5 border-b border-gray-600 bg-gray-800 text-sm"><p className="text-gray-100">${input.price ? input.price.toFixed(2) : '0.00'}</p></td>
+                                <td className="px-5 py-5 border-b border-gray-600 bg-gray-800 text-sm">
+                                    {/* CORRECCIÓN: Validar que `input.activeComponents` exista */}
+                                    {input.activeComponents && input.activeComponents.length > 0 ? (
+                                      <ul className="list-disc list-inside text-gray-100 text-xs">
+                                          {input.activeComponents.map((c, i) => <li key={i}>{c.name}: {c.percentage}%</li>)}
+                                      </ul>
+                                    ) : (
+                                      <p className="text-gray-400 text-xs">N/A</p>
+                                    )}
+                                </td>
+                                <td className="px-5 py-5 border-b border-gray-600 bg-gray-800 text-sm">
+                                    <div className="flex gap-2">
+                                        <button onClick={() => handleEditInput(input)} className="bg-yellow-500 text-white font-bold py-1 px-3 rounded-full text-xs">Editar</button>
+                                        <button onClick={() => handleArchiveInput(input.id)} className="bg-red-500 text-white font-bold py-1 px-3 rounded-full text-xs">Archivar</button>
+                                    </div>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    );
 };
+
+
+// Componente para la gestión de catálogo de productos (ACTUALIZADO)
+const ProductCatalog = () => {
+    const { db, userId, isAuthReady, userRole, addNotification } = useContext(AppContext);
+    const units = useUnits();
+
+    const [products, setProducts] = useState([]);
+    const [newProductData, setNewProductData] = useState({ name: '', unitId: '', price: '' });
+    const [editingProduct, setEditingProduct] = useState(null);
+    const [showAddForm, setShowAddForm] = useState(false);
+
+    useEffect(() => {
+        if (db && isAuthReady && userRole === 'admin') {
+            const appId = process.env.REACT_APP_APP_ID || 'default-app-id';
+            const productsColRef = collection(db, `artifacts/${appId}/public/data/product_catalog`);
+            const q = query(productsColRef, where('isActive', '==', true));
+            const unsubscribe = onSnapshot(q, (snapshot) => {
+                setProducts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+            }, (error) => addNotification("Error al cargar productos.", "error"));
+            return () => unsubscribe();
+        }
+    }, [db, isAuthReady, userRole, addNotification]);
+    
+    const handleNewInputChange = (e) => {
+      const { name, value } = e.target;
+      setNewProductData(prev => ({ ...prev, [name]: value}));
+    };
+
+    const resetAddForm = () => {
+        setNewProductData({ name: '', unitId: '', price: '' });
+        setShowAddForm(false);
+    };
+
+    const handleAddProduct = async (e) => {
+        e.preventDefault();
+        const { name, unitId, price } = newProductData;
+        if (!name || !unitId || !price) return addNotification("Rellena todos los campos.", "warning");
+
+        const selectedUnit = units.find(u => u.id === unitId);
+        if (!selectedUnit) return addNotification("Unidad no válida.", "error");
+
+        try {
+            const appId = process.env.REACT_APP_APP_ID || 'default-app-id';
+            await addDoc(collection(db, `artifacts/${appId}/public/data/product_catalog`), {
+                name: name.trim(),
+                unitId,
+                unitName: selectedUnit.name,
+                unitAbbreviation: selectedUnit.abbreviation,
+                price: parseFloat(price),
+                isActive: true,
+                createdAt: new Date(),
+                createdBy: userId
+            });
+            addNotification("Producto añadido.", "success");
+            resetAddForm();
+        } catch (error) {
+            addNotification("Error al añadir producto.", "error");
+        }
+    };
+
+    const handleEditProduct = (product) => {
+      setEditingProduct({ ...product });
+    };
+    
+    const handleEditingInputChange = (e) => {
+      const { name, value } = e.target;
+      setEditingProduct(prev => ({...prev, [name]: value}));
+    }
+
+    const handleSaveProduct = async (productId) => {
+        const { unitId, price } = editingProduct;
+        if (!unitId || !price) return addNotification("Rellena los campos.", "warning");
+        const selectedUnit = units.find(u => u.id === unitId);
+        if (!selectedUnit) return addNotification("Unidad no válida.", "error");
+
+        try {
+            const appId = process.env.REACT_APP_APP_ID || 'default-app-id';
+            const productDocRef = doc(db, `artifacts/${appId}/public/data/product_catalog`, productId);
+            await updateDoc(productDocRef, {
+                unitId,
+                unitName: selectedUnit.name,
+                unitAbbreviation: selectedUnit.abbreviation,
+                price: parseFloat(price),
+                updatedAt: new Date(),
+                updatedBy: userId
+            });
+            addNotification("Producto actualizado.", "success");
+            setEditingProduct(null);
+        } catch (error) {
+            addNotification("Error al actualizar producto.", "error");
+        }
+    };
+    
+    const handleCancelEdit = () => {
+        setEditingProduct(null);
+    };
+
+    const handleArchiveProduct = async (productId) => {
+        try {
+            const appId = process.env.REACT_APP_APP_ID || 'default-app-id';
+            const productDocRef = doc(db, `artifacts/${appId}/public/data/product_catalog`, productId);
+            await updateDoc(productDocRef, { isActive: false, archivedAt: new Date(), archivedBy: userId });
+            addNotification("Producto archivado.", "success");
+        } catch (error) {
+            addNotification("Error al archivar producto.", "error");
+        }
+    };
+    
+    if (userRole !== 'admin') return <div className="p-6 text-center text-red-500 bg-gray-900 text-white rounded-lg">No tienes permisos.</div>;
+
+    const AddEditForm = ({ isEditing }) => {
+        const data = isEditing ? editingProduct : newProductData;
+        const changeHandler = isEditing ? handleEditingInputChange : handleNewInputChange;
+        const submitHandler = isEditing ? (e) => { e.preventDefault(); handleSaveProduct(data.id); } : handleAddProduct;
+        const cancelHandler = isEditing ? handleCancelEdit : resetAddForm;
+        
+        return (
+            <form onSubmit={submitHandler} className="mb-8 p-6 bg-gray-700 rounded-lg shadow-inner">
+                <h3 className="text-2xl font-semibold text-emerald-300 mb-4">{isEditing ? "Editar Producto" : "Nuevo Producto"}</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    {!isEditing && (
+                      <div>
+                          <label className="block text-gray-200 text-sm font-bold mb-2">Nombre:</label>
+                          <input type="text" name="name" value={data.name} onChange={changeHandler} className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 bg-gray-600 text-white" required />
+                      </div>
+                    )}
+                    <div className={isEditing ? 'md:col-span-2' : ''}>
+                        <label className="block text-gray-200 text-sm font-bold mb-2">Unidad de Venta:</label>
+                        <select name="unitId" value={data.unitId} onChange={changeHandler} className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 bg-gray-600 text-white" required>
+                            <option value="">Selecciona una unidad</option>
+                            {units.map(unit => <option key={unit.id} value={unit.id}>{unit.name} ({unit.abbreviation})</option>)}
+                        </select>
+                    </div>
+                    <div>
+                        <label className="block text-gray-200 text-sm font-bold mb-2">Precio ($):</label>
+                        <input type="number" step="0.01" name="price" value={data.price} onChange={changeHandler} className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 bg-gray-600 text-white" required />
+                    </div>
+                </div>
+                <div className="flex justify-end gap-2">
+                    <button type="submit" className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded-full shadow">Guardar</button>
+                    <button type="button" onClick={cancelHandler} className="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-full shadow">Cancelar</button>
+                </div>
+            </form>
+        );
+    };
+
+    return (
+        <div className="container mx-auto p-4 max-w-4xl bg-gray-800 text-gray-100 rounded-lg shadow-xl my-8 border border-gray-700">
+            <h2 className="text-3xl font-bold text-emerald-400 mb-6 border-b-2 border-gray-700 pb-2">Gestión de Productos</h2>
+            {!showAddForm && !editingProduct &&(
+                <button onClick={() => setShowAddForm(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded-full shadow-lg mb-6">Añadir Nuevo Producto</button>
+            )}
+            
+            {showAddForm && <AddEditForm isEditing={false} />}
+            {editingProduct && <AddEditForm isEditing={true} />}
+
+            <h3 className="text-2xl font-semibold text-emerald-300 mb-4">Productos Existentes</h3>
+            <div className="overflow-x-auto rounded-lg shadow-md">
+                <table className="min-w-full leading-normal">
+                    <thead><tr className="bg-gray-700 border-b border-gray-600"><th className="px-5 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">Nombre</th><th className="px-5 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">Unidad</th><th className="px-5 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">Precio</th><th className="px-5 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">Acciones</th></tr></thead>
+                    <tbody>
+                        {products.map((product) => (
+                            <tr key={product.id} className="hover:bg-gray-700">
+                                <td className="px-5 py-5 border-b border-gray-600 bg-gray-800 text-sm"><p className="text-gray-100">{product.name}</p></td>
+                                <td className="px-5 py-5 border-b border-gray-600 bg-gray-800 text-sm"><p className="text-gray-100">{product.unitName}</p></td>
+                                <td className="px-5 py-5 border-b border-gray-600 bg-gray-800 text-sm"><p className="text-gray-100">${product.price ? product.price.toFixed(2) : '0.00'}</p></td>
+                                <td className="px-5 py-5 border-b border-gray-600 bg-gray-800 text-sm">
+                                    <div className="flex gap-2">
+                                        <button onClick={() => handleEditProduct(product)} className="bg-yellow-500 text-white font-bold py-1 px-3 rounded-full text-xs">Editar</button>
+                                        <button onClick={() => handleArchiveProduct(product.id)} className="bg-red-500 text-white font-bold py-1 px-3 rounded-full text-xs">Archivar</button>
+                                    </div>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    );
+};
+
 
 // Componente para el registro de Producción
 const ProductionForm = () => {
@@ -4732,6 +4819,7 @@ function App() {
               <button onClick={() => handleMenuItemClick('input-application-form')} className="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-emerald-800 hover:text-white rounded-lg">Aplicación Insumos</button>
               <button onClick={() => handleMenuItemClick('labor-form')} className="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-emerald-800 hover:text-white rounded-lg">Registrar Labor</button>
               <button onClick={() => handleMenuItemClick('report-disease-form')} className="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-emerald-800 hover:text-white rounded-lg">Reportar Enfermedad</button>
+              
             </div>
           </div>
 
@@ -4761,6 +4849,8 @@ function App() {
               <button onClick={() => handleMenuItemClick('admin-locations')} className="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-emerald-800 hover:text-white rounded-lg">Gestión Ubicaciones</button>
               <button onClick={() => handleMenuItemClick('admin-users')} className="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-emerald-800 hover:text-white rounded-lg">Gestión Usuarios</button>
               <button onClick={() => handleMenuItemClick('reports-dashboard')} className="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-emerald-800 hover:text-white rounded-lg">Reportes</button>
+              <button onClick={() => handleMenuItemClick('admin-units')} className="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-emerald-800 hover:text-white rounded-lg">Gestión Unidades</button>
+              <button onClick={() => handleMenuItemClick('admin-input-types')} className="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-emerald-800 hover:text-white rounded-lg">Tipos de Insumo</button>
             </div>
           </div>
 
@@ -4901,6 +4991,8 @@ function App() {
               {currentPage === 'admin-inputs' && <InputCatalog />}
               {currentPage === 'admin-products' && <ProductCatalog />}
               {currentPage === 'admin-labor-types' && <LaborTypeCatalog />}
+              {currentPage === 'admin-units' && <UnitCatalog />}
+              {currentPage === 'admin-input-types' && <InputTypeCatalog />}
               {currentPage === 'admin-diseases' && <DiseaseCatalog />}
               {currentPage === 'admin-nutrient-recipes' && <NutrientRecipeCatalog />}
               {currentPage === 'reports-dashboard' && <ReportsDashboard />}
