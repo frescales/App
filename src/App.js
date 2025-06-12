@@ -131,6 +131,126 @@ const useLocations = () => {
   return locations;
 };
 
+// **NUEVO** Componente de Formulario para Insumos
+const InputAddEditForm = ({
+  isEditing,
+  data,
+  changeHandler,
+  componentChangeHandler,
+  submitHandler,
+  cancelHandler,
+  addActiveComponentRow,
+  removeActiveComponentRow,
+  units,
+  inputTypes
+}) => {
+  return (
+    <form onSubmit={submitHandler} className="mb-8 p-6 bg-gray-700 rounded-lg shadow-inner">
+      <h3 className="text-2xl font-semibold text-emerald-300 mb-4">{isEditing ? "Editar Insumo" : "Nuevo Insumo"}</h3>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        {/* El campo de nombre solo se muestra si no se está editando */}
+        {!isEditing && (
+          <div>
+            <label className="block text-gray-200 text-sm font-bold mb-2">Nombre:</label>
+            <input type="text" name="name" value={data.name} onChange={changeHandler} className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 bg-gray-600 text-white" required />
+          </div>
+        )}
+        {/* Si se está editando, mostramos el nombre como texto no editable pero ocupando el espacio */}
+        {isEditing && (
+             <div className="md:col-span-1">
+                <label className="block text-gray-200 text-sm font-bold mb-2">Nombre:</label>
+                <p className="shadow appearance-none border rounded-md w-full py-2 px-3 bg-gray-600 text-white font-semibold">{data.name}</p>
+            </div>
+        )}
+         <div>
+            <label className="block text-gray-200 text-sm font-bold mb-2">Tipo de Insumo:</label>
+            <select name="inputTypeId" value={data.inputTypeId} onChange={changeHandler} className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 bg-gray-600 text-white" required>
+                <option value="">Selecciona un tipo</option>
+                {inputTypes.map(type => <option key={type.id} value={type.id}>{type.name}</option>)}
+            </select>
+        </div>
+        <div>
+            <label className="block text-gray-200 text-sm font-bold mb-2">Unidad:</label>
+            <select name="unitId" value={data.unitId} onChange={changeHandler} className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 bg-gray-600 text-white" required>
+                <option value="">Selecciona una unidad</option>
+                {units.map(unit => <option key={unit.id} value={unit.id}>{unit.name} ({unit.abbreviation})</option>)}
+            </select>
+        </div>
+        <div>
+            <label className="block text-gray-200 text-sm font-bold mb-2">Precio ($):</label>
+            <input type="number" step="0.01" name="price" value={data.price} onChange={changeHandler} className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 bg-gray-600 text-white" required />
+        </div>
+      </div>
+
+      <h4 className="text-xl font-semibold text-emerald-300 mb-3">Componentes Activos</h4>
+      {data.activeComponents && data.activeComponents.map((component, index) => (
+        <div key={index} className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3 p-3 border border-gray-600 rounded-md bg-gray-800">
+          <input type="text" name="name" value={component.name} onChange={(e) => componentChangeHandler(index, e)} placeholder="Nombre Componente" className="shadow appearance-none border rounded-md w-full py-1 px-2 text-gray-800 bg-gray-700 text-white" required />
+          <input type="number" step="0.01" name="percentage" value={component.percentage} onChange={(e) => componentChangeHandler(index, e)} placeholder="Porcentaje (%)" className="shadow appearance-none border rounded-md w-full py-1 px-2 text-gray-800 bg-gray-700 text-white" required />
+          <div className="flex items-center">
+            {data.activeComponents.length > 1 && (
+              <button type="button" onClick={() => removeActiveComponentRow(index, isEditing)} className="bg-red-500 text-white font-bold py-1 px-2 rounded-full text-xs">Remover</button>
+            )}
+          </div>
+        </div>
+      ))}
+      <button type="button" onClick={() => addActiveComponentRow(isEditing)} className="bg-blue-500 text-white font-bold py-1 px-3 rounded-full text-sm mt-2">Añadir Componente</button>
+
+      <div className="flex justify-end gap-2 mt-6">
+        <button type="submit" className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded-full shadow">Guardar</button>
+        <button type="button" onClick={cancelHandler} className="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-full shadow">Cancelar</button>
+      </div>
+    </form>
+  );
+};
+
+// **NUEVO** Componente de Formulario para Productos
+const ProductAddEditForm = ({
+  isEditing,
+  data,
+  changeHandler,
+  submitHandler,
+  cancelHandler,
+  units
+}) => {
+  return (
+    <form onSubmit={submitHandler} className="mb-8 p-6 bg-gray-700 rounded-lg shadow-inner">
+      <h3 className="text-2xl font-semibold text-emerald-300 mb-4">{isEditing ? "Editar Producto" : "Nuevo Producto"}</h3>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+        {/* El campo de nombre solo se muestra si no se está editando */}
+        {!isEditing && (
+          <div>
+            <label className="block text-gray-200 text-sm font-bold mb-2">Nombre:</label>
+            <input type="text" name="name" value={data.name} onChange={changeHandler} className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 bg-gray-600 text-white" required />
+          </div>
+        )}
+        {/* Si se está editando, mostramos el nombre como texto no editable pero ocupando el espacio */}
+        {isEditing && (
+             <div className="md:col-span-1">
+                <label className="block text-gray-200 text-sm font-bold mb-2">Nombre:</label>
+                <p className="shadow appearance-none border rounded-md w-full py-2 px-3 bg-gray-600 text-white font-semibold">{data.name}</p>
+            </div>
+        )}
+        <div className={isEditing ? 'md:col-span-1' : ''}>
+          <label className="block text-gray-200 text-sm font-bold mb-2">Unidad de Venta:</label>
+          <select name="unitId" value={data.unitId} onChange={changeHandler} className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 bg-gray-600 text-white" required>
+            <option value="">Selecciona una unidad</option>
+            {units.map(unit => <option key={unit.id} value={unit.id}>{unit.name} ({unit.abbreviation})</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="block text-gray-200 text-sm font-bold mb-2">Precio ($):</label>
+          <input type="number" step="0.01" name="price" value={data.price} onChange={changeHandler} className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 bg-gray-600 text-white" required />
+        </div>
+      </div>
+      <div className="flex justify-end gap-2">
+        <button type="submit" className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded-full shadow">Guardar</button>
+        <button type="button" onClick={cancelHandler} className="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-full shadow">Cancelar</button>
+      </div>
+    </form>
+  );
+};
+
 // Componente para la gestión de Unidades de Medida
 const UnitCatalog = () => {
   const { db, userId, isAuthReady, userRole, addNotification } = useContext(AppContext);
@@ -219,8 +339,6 @@ const UnitCatalog = () => {
   };
 
   const handleArchiveUnit = async (unitId) => {
-    // Reemplazar window.confirm con una notificación o un modal personalizado si es posible
-    // Por ahora, lo dejamos así para mantener la funcionalidad.
     try {
       const appId = process.env.REACT_APP_APP_ID || 'default-app-id';
       const unitDocRef = doc(db, `artifacts/${appId}/public/data/units`, unitId);
@@ -636,7 +754,8 @@ const LocationCatalog = () => {
     </div>
   );
 };
-// Componente para la gestión de catálogo de insumos (ACTUALIZADO Y CORREGIDO)
+
+// Componente para la gestión de catálogo de insumos (CORREGIDO)
 const InputCatalog = () => {
     const { db, userId, isAuthReady, userRole, addNotification } = useContext(AppContext);
     const units = useUnits();
@@ -644,11 +763,7 @@ const InputCatalog = () => {
 
     const [inputs, setInputs] = useState([]);
     const [newInputData, setNewInputData] = useState({
-        name: '',
-        unitId: '',
-        price: '',
-        inputTypeId: '',
-        activeComponents: [{ name: '', percentage: '' }]
+        name: '', unitId: '', price: '', inputTypeId: '', activeComponents: [{ name: '', percentage: '' }]
     });
     const [editingInput, setEditingInput] = useState(null);
     const [showAddForm, setShowAddForm] = useState(false);
@@ -658,7 +773,6 @@ const InputCatalog = () => {
             const appId = process.env.REACT_APP_APP_ID || 'default-app-id';
             const inputsColRef = collection(db, `artifacts/${appId}/public/data/input_catalog`);
             const q = query(inputsColRef, where('isActive', '==', true));
-
             const unsubscribe = onSnapshot(q, (snapshot) => {
                 const inputsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 setInputs(inputsData);
@@ -674,11 +788,15 @@ const InputCatalog = () => {
         setNewInputData(prev => ({ ...prev, [name]: value }));
     };
 
+    const handleEditingInputChange = (e) => {
+        const { name, value } = e.target;
+        setEditingInput(prev => ({ ...prev, [name]: value }));
+    };
+    
     const handleActiveComponentChange = (index, e, isEditing = false) => {
         const { name, value } = e.target;
         const target = isEditing ? editingInput : newInputData;
         const setter = isEditing ? setEditingInput : setNewInputData;
-
         const updatedComponents = [...(target.activeComponents || [])];
         updatedComponents[index] = { ...updatedComponents[index], [name]: value };
         setter(prev => ({ ...prev, activeComponents: updatedComponents }));
@@ -715,17 +833,10 @@ const InputCatalog = () => {
         try {
             const appId = process.env.REACT_APP_APP_ID || 'default-app-id';
             await addDoc(collection(db, `artifacts/${appId}/public/data/input_catalog`), {
-                name: name.trim(),
-                unitId,
-                unitName: selectedUnit.name,
-                unitAbbreviation: selectedUnit.abbreviation,
-                inputTypeId,
-                inputTypeName: selectedType.name,
-                price: parseFloat(price),
+                name: name.trim(), unitId, unitName: selectedUnit.name, unitAbbreviation: selectedUnit.abbreviation,
+                inputTypeId, inputTypeName: selectedType.name, price: parseFloat(price),
                 activeComponents: activeComponents.map(c => ({ name: c.name.trim(), percentage: parseFloat(c.percentage) })),
-                isActive: true,
-                createdAt: new Date(),
-                createdBy: userId
+                isActive: true, createdAt: new Date(), createdBy: userId
             });
             addNotification("Insumo añadido.", "success");
             resetAddForm();
@@ -735,47 +846,35 @@ const InputCatalog = () => {
     };
     
     const handleEditInput = (input) => {
-      // CORRECCIÓN: Asegurarse que activeComponents sea un array al editar.
       setEditingInput({ ...input, activeComponents: input.activeComponents || [{ name: '', percentage: '' }] });
     };
 
-    const handleEditingInputChange = (e) => {
-      const { name, value } = e.target;
-      setEditingInput(prev => ({ ...prev, [name]: value}));
-    }
+    const handleSaveInput = async (e) => {
+        e.preventDefault();
+        const { id, unitId, inputTypeId, price, activeComponents } = editingInput;
+        if (!unitId || !inputTypeId || !price) return addNotification("Rellena los campos principales.", "warning");
 
-    const handleSaveInput = async (inputId) => {
-      const { unitId, inputTypeId, price, activeComponents } = editingInput;
-      if (!unitId || !inputTypeId || !price) return addNotification("Rellena los campos principales.", "warning");
+        const selectedUnit = units.find(u => u.id === unitId);
+        const selectedType = inputTypes.find(t => t.id === inputTypeId);
+        if (!selectedUnit || !selectedType) return addNotification("Unidad o tipo no válidos.", "error");
 
-      const selectedUnit = units.find(u => u.id === unitId);
-      const selectedType = inputTypes.find(t => t.id === inputTypeId);
-      if (!selectedUnit || !selectedType) return addNotification("Unidad o tipo no válidos.", "error");
-
-      try {
-        const appId = process.env.REACT_APP_APP_ID || 'default-app-id';
-        const inputDocRef = doc(db, `artifacts/${appId}/public/data/input_catalog`, inputId);
-        await updateDoc(inputDocRef, {
-            unitId,
-            unitName: selectedUnit.name,
-            unitAbbreviation: selectedUnit.abbreviation,
-            inputTypeId,
-            inputTypeName: selectedType.name,
-            price: parseFloat(price),
-            activeComponents: activeComponents.map(c => ({ name: c.name.trim(), percentage: parseFloat(c.percentage) })),
-            updatedAt: new Date(),
-            updatedBy: userId
-        });
-        addNotification("Insumo actualizado.", "success");
-        setEditingInput(null);
-      } catch (error) {
-        addNotification("Error al actualizar insumo.", "error");
-      }
+        try {
+            const appId = process.env.REACT_APP_APP_ID || 'default-app-id';
+            const inputDocRef = doc(db, `artifacts/${appId}/public/data/input_catalog`, id);
+            await updateDoc(inputDocRef, {
+                unitId, unitName: selectedUnit.name, unitAbbreviation: selectedUnit.abbreviation,
+                inputTypeId, inputTypeName: selectedType.name, price: parseFloat(price),
+                activeComponents: activeComponents.map(c => ({ name: c.name.trim(), percentage: parseFloat(c.percentage) })),
+                updatedAt: new Date(), updatedBy: userId
+            });
+            addNotification("Insumo actualizado.", "success");
+            setEditingInput(null);
+        } catch (error) {
+            addNotification("Error al actualizar insumo.", "error");
+        }
     };
 
-    const handleCancelEdit = () => {
-        setEditingInput(null);
-    };
+    const handleCancelEdit = () => setEditingInput(null);
 
     const handleArchiveInput = async (inputId) => {
         try {
@@ -789,66 +888,6 @@ const InputCatalog = () => {
     };
 
     if (userRole !== 'admin') return <div className="p-6 text-center text-red-500 bg-gray-900 text-white rounded-lg">No tienes permisos.</div>;
-
-    const AddEditForm = ({ isEditing }) => {
-        const data = isEditing ? editingInput : newInputData;
-        const changeHandler = isEditing ? handleEditingInputChange : handleNewInputChange;
-        const componentChangeHandler = (index, e) => handleActiveComponentChange(index, e, isEditing);
-        const submitHandler = isEditing ? (e) => { e.preventDefault(); handleSaveInput(data.id); } : handleAddInput;
-        const cancelHandler = isEditing ? handleCancelEdit : resetAddForm;
-        
-        return (
-            <form onSubmit={submitHandler} className="mb-8 p-6 bg-gray-700 rounded-lg shadow-inner">
-                <h3 className="text-2xl font-semibold text-emerald-300 mb-4">{isEditing ? "Editar Insumo" : "Nuevo Insumo"}</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                    {!isEditing && (
-                        <div>
-                            <label className="block text-gray-200 text-sm font-bold mb-2">Nombre:</label>
-                            <input type="text" name="name" value={data.name} onChange={changeHandler} className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 bg-gray-600 text-white" required />
-                        </div>
-                    )}
-                     <div>
-                        <label className="block text-gray-200 text-sm font-bold mb-2">Tipo de Insumo:</label>
-                        <select name="inputTypeId" value={data.inputTypeId} onChange={changeHandler} className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 bg-gray-600 text-white" required>
-                            <option value="">Selecciona un tipo</option>
-                            {inputTypes.map(type => <option key={type.id} value={type.id}>{type.name}</option>)}
-                        </select>
-                    </div>
-                    <div>
-                        <label className="block text-gray-200 text-sm font-bold mb-2">Unidad:</label>
-                        <select name="unitId" value={data.unitId} onChange={changeHandler} className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 bg-gray-600 text-white" required>
-                            <option value="">Selecciona una unidad</option>
-                            {units.map(unit => <option key={unit.id} value={unit.id}>{unit.name} ({unit.abbreviation})</option>)}
-                        </select>
-                    </div>
-                    <div>
-                        <label className="block text-gray-200 text-sm font-bold mb-2">Precio ($):</label>
-                        <input type="number" step="0.01" name="price" value={data.price} onChange={changeHandler} className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 bg-gray-600 text-white" required />
-                    </div>
-                </div>
-
-                <h4 className="text-xl font-semibold text-emerald-300 mb-3">Componentes Activos</h4>
-                {/* CORRECCIÓN: Validar que `data.activeComponents` exista antes de mapear */}
-                {data.activeComponents && data.activeComponents.map((component, index) => (
-                    <div key={index} className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3 p-3 border border-gray-600 rounded-md bg-gray-800">
-                        <input type="text" name="name" value={component.name} onChange={(e) => componentChangeHandler(index, e)} placeholder="Nombre Componente" className="shadow appearance-none border rounded-md w-full py-1 px-2 text-gray-800 bg-gray-700 text-white" required />
-                        <input type="number" step="0.01" name="percentage" value={component.percentage} onChange={(e) => componentChangeHandler(index, e)} placeholder="Porcentaje (%)" className="shadow appearance-none border rounded-md w-full py-1 px-2 text-gray-800 bg-gray-700 text-white" required />
-                        <div className="flex items-center">
-                            {data.activeComponents.length > 1 && (
-                                <button type="button" onClick={() => removeActiveComponentRow(index, isEditing)} className="bg-red-500 text-white font-bold py-1 px-2 rounded-full text-xs">Remover</button>
-                            )}
-                        </div>
-                    </div>
-                ))}
-                <button type="button" onClick={() => addActiveComponentRow(isEditing)} className="bg-blue-500 text-white font-bold py-1 px-3 rounded-full text-sm mt-2">Añadir Componente</button>
-
-                <div className="flex justify-end gap-2 mt-6">
-                    <button type="submit" className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded-full shadow">Guardar</button>
-                    <button type="button" onClick={cancelHandler} className="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-full shadow">Cancelar</button>
-                </div>
-            </form>
-        );
-    };
     
     return (
         <div className="container mx-auto p-4 max-w-5xl bg-gray-800 text-gray-100 rounded-lg shadow-xl my-8 border border-gray-700">
@@ -860,8 +899,8 @@ const InputCatalog = () => {
                 </button>
             )}
 
-            {showAddForm && <AddEditForm isEditing={false} />}
-            {editingInput && <AddEditForm isEditing={true} />}
+            {showAddForm && <InputAddEditForm isEditing={false} data={newInputData} changeHandler={handleNewInputChange} componentChangeHandler={(index, e) => handleActiveComponentChange(index, e, false)} submitHandler={handleAddInput} cancelHandler={resetAddForm} addActiveComponentRow={(isEditing) => addActiveComponentRow(isEditing)} removeActiveComponentRow={(index, isEditing) => removeActiveComponentRow(index, isEditing)} units={units} inputTypes={inputTypes} />}
+            {editingInput && <InputAddEditForm isEditing={true} data={editingInput} changeHandler={handleEditingInputChange} componentChangeHandler={(index, e) => handleActiveComponentChange(index, e, true)} submitHandler={handleSaveInput} cancelHandler={handleCancelEdit} addActiveComponentRow={(isEditing) => addActiveComponentRow(isEditing)} removeActiveComponentRow={(index, isEditing) => removeActiveComponentRow(index, isEditing)} units={units} inputTypes={inputTypes} />}
 
             <h3 className="text-2xl font-semibold text-emerald-300 mb-4">Insumos Existentes</h3>
             <div className="overflow-x-auto rounded-lg shadow-md">
@@ -875,14 +914,11 @@ const InputCatalog = () => {
                                 <td className="px-5 py-5 border-b border-gray-600 bg-gray-800 text-sm"><p className="text-gray-100">{input.unitAbbreviation}</p></td>
                                 <td className="px-5 py-5 border-b border-gray-600 bg-gray-800 text-sm"><p className="text-gray-100">${input.price ? input.price.toFixed(2) : '0.00'}</p></td>
                                 <td className="px-5 py-5 border-b border-gray-600 bg-gray-800 text-sm">
-                                    {/* CORRECCIÓN: Validar que `input.activeComponents` exista */}
                                     {input.activeComponents && input.activeComponents.length > 0 ? (
                                       <ul className="list-disc list-inside text-gray-100 text-xs">
                                           {input.activeComponents.map((c, i) => <li key={i}>{c.name}: {c.percentage}%</li>)}
                                       </ul>
-                                    ) : (
-                                      <p className="text-gray-400 text-xs">N/A</p>
-                                    )}
+                                    ) : ( <p className="text-gray-400 text-xs">N/A</p> )}
                                 </td>
                                 <td className="px-5 py-5 border-b border-gray-600 bg-gray-800 text-sm">
                                     <div className="flex gap-2">
@@ -900,7 +936,7 @@ const InputCatalog = () => {
 };
 
 
-// Componente para la gestión de catálogo de productos (ACTUALIZADO)
+// Componente para la gestión de catálogo de productos (CORREGIDO)
 const ProductCatalog = () => {
     const { db, userId, isAuthReady, userRole, addNotification } = useContext(AppContext);
     const units = useUnits();
@@ -917,7 +953,9 @@ const ProductCatalog = () => {
             const q = query(productsColRef, where('isActive', '==', true));
             const unsubscribe = onSnapshot(q, (snapshot) => {
                 setProducts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-            }, (error) => addNotification("Error al cargar productos.", "error"));
+            }, (error) => {
+                addNotification("Error al cargar productos.", "error");
+            });
             return () => unsubscribe();
         }
     }, [db, isAuthReady, userRole, addNotification]);
@@ -925,6 +963,11 @@ const ProductCatalog = () => {
     const handleNewInputChange = (e) => {
       const { name, value } = e.target;
       setNewProductData(prev => ({ ...prev, [name]: value}));
+    };
+
+    const handleEditingInputChange = (e) => {
+        const { name, value } = e.target;
+        setEditingProduct(prev => ({ ...prev, [name]: value }));
     };
 
     const resetAddForm = () => {
@@ -943,14 +986,8 @@ const ProductCatalog = () => {
         try {
             const appId = process.env.REACT_APP_APP_ID || 'default-app-id';
             await addDoc(collection(db, `artifacts/${appId}/public/data/product_catalog`), {
-                name: name.trim(),
-                unitId,
-                unitName: selectedUnit.name,
-                unitAbbreviation: selectedUnit.abbreviation,
-                price: parseFloat(price),
-                isActive: true,
-                createdAt: new Date(),
-                createdBy: userId
+                name: name.trim(), unitId, unitName: selectedUnit.name, unitAbbreviation: selectedUnit.abbreviation,
+                price: parseFloat(price), isActive: true, createdAt: new Date(), createdBy: userId
             });
             addNotification("Producto añadido.", "success");
             resetAddForm();
@@ -962,28 +999,20 @@ const ProductCatalog = () => {
     const handleEditProduct = (product) => {
       setEditingProduct({ ...product });
     };
-    
-    const handleEditingInputChange = (e) => {
-      const { name, value } = e.target;
-      setEditingProduct(prev => ({...prev, [name]: value}));
-    }
 
-    const handleSaveProduct = async (productId) => {
-        const { unitId, price } = editingProduct;
+    const handleSaveProduct = async (e) => {
+        e.preventDefault();
+        const { id, unitId, price } = editingProduct;
         if (!unitId || !price) return addNotification("Rellena los campos.", "warning");
         const selectedUnit = units.find(u => u.id === unitId);
         if (!selectedUnit) return addNotification("Unidad no válida.", "error");
 
         try {
             const appId = process.env.REACT_APP_APP_ID || 'default-app-id';
-            const productDocRef = doc(db, `artifacts/${appId}/public/data/product_catalog`, productId);
+            const productDocRef = doc(db, `artifacts/${appId}/public/data/product_catalog`, id);
             await updateDoc(productDocRef, {
-                unitId,
-                unitName: selectedUnit.name,
-                unitAbbreviation: selectedUnit.abbreviation,
-                price: parseFloat(price),
-                updatedAt: new Date(),
-                updatedBy: userId
+                unitId, unitName: selectedUnit.name, unitAbbreviation: selectedUnit.abbreviation,
+                price: parseFloat(price), updatedAt: new Date(), updatedBy: userId
             });
             addNotification("Producto actualizado.", "success");
             setEditingProduct(null);
@@ -992,9 +1021,7 @@ const ProductCatalog = () => {
         }
     };
     
-    const handleCancelEdit = () => {
-        setEditingProduct(null);
-    };
+    const handleCancelEdit = () => setEditingProduct(null);
 
     const handleArchiveProduct = async (productId) => {
         try {
@@ -1009,42 +1036,6 @@ const ProductCatalog = () => {
     
     if (userRole !== 'admin') return <div className="p-6 text-center text-red-500 bg-gray-900 text-white rounded-lg">No tienes permisos.</div>;
 
-    const AddEditForm = ({ isEditing }) => {
-        const data = isEditing ? editingProduct : newProductData;
-        const changeHandler = isEditing ? handleEditingInputChange : handleNewInputChange;
-        const submitHandler = isEditing ? (e) => { e.preventDefault(); handleSaveProduct(data.id); } : handleAddProduct;
-        const cancelHandler = isEditing ? handleCancelEdit : resetAddForm;
-        
-        return (
-            <form onSubmit={submitHandler} className="mb-8 p-6 bg-gray-700 rounded-lg shadow-inner">
-                <h3 className="text-2xl font-semibold text-emerald-300 mb-4">{isEditing ? "Editar Producto" : "Nuevo Producto"}</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                    {!isEditing && (
-                      <div>
-                          <label className="block text-gray-200 text-sm font-bold mb-2">Nombre:</label>
-                          <input type="text" name="name" value={data.name} onChange={changeHandler} className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 bg-gray-600 text-white" required />
-                      </div>
-                    )}
-                    <div className={isEditing ? 'md:col-span-2' : ''}>
-                        <label className="block text-gray-200 text-sm font-bold mb-2">Unidad de Venta:</label>
-                        <select name="unitId" value={data.unitId} onChange={changeHandler} className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 bg-gray-600 text-white" required>
-                            <option value="">Selecciona una unidad</option>
-                            {units.map(unit => <option key={unit.id} value={unit.id}>{unit.name} ({unit.abbreviation})</option>)}
-                        </select>
-                    </div>
-                    <div>
-                        <label className="block text-gray-200 text-sm font-bold mb-2">Precio ($):</label>
-                        <input type="number" step="0.01" name="price" value={data.price} onChange={changeHandler} className="shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-800 bg-gray-600 text-white" required />
-                    </div>
-                </div>
-                <div className="flex justify-end gap-2">
-                    <button type="submit" className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded-full shadow">Guardar</button>
-                    <button type="button" onClick={cancelHandler} className="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-full shadow">Cancelar</button>
-                </div>
-            </form>
-        );
-    };
-
     return (
         <div className="container mx-auto p-4 max-w-4xl bg-gray-800 text-gray-100 rounded-lg shadow-xl my-8 border border-gray-700">
             <h2 className="text-3xl font-bold text-emerald-400 mb-6 border-b-2 border-gray-700 pb-2">Gestión de Productos</h2>
@@ -1052,8 +1043,8 @@ const ProductCatalog = () => {
                 <button onClick={() => setShowAddForm(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded-full shadow-lg mb-6">Añadir Nuevo Producto</button>
             )}
             
-            {showAddForm && <AddEditForm isEditing={false} />}
-            {editingProduct && <AddEditForm isEditing={true} />}
+            {showAddForm && <ProductAddEditForm isEditing={false} data={newProductData} changeHandler={handleNewInputChange} submitHandler={handleAddProduct} cancelHandler={resetAddForm} units={units} />}
+            {editingProduct && <ProductAddEditForm isEditing={true} data={editingProduct} changeHandler={handleEditingInputChange} submitHandler={handleSaveProduct} cancelHandler={handleCancelEdit} units={units} />}
 
             <h3 className="text-2xl font-semibold text-emerald-300 mb-4">Productos Existentes</h3>
             <div className="overflow-x-auto rounded-lg shadow-md">
